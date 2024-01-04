@@ -199,7 +199,7 @@ fn Message(cx: Scope, message: Signal<Message>) -> Element {
     };
     render! {
         div {
-            class: "w-1/3 p-2 bg-white rounded-lg shadow-md {align} {text_color}",
+            class: "w-2/3 p-2 bg-white rounded-lg shadow-md {align} {text_color}",
             background_color: message.user.background_color(),
             "{text}"
         }
