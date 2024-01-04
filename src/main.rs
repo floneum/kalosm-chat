@@ -93,7 +93,7 @@ fn Home(cx: Scope, assistant_description: String) -> Element {
     let assistant_responding = use_signal(cx, || false);
     let model = cx.use_hook(Llama::new_chat);
     let chat = use_signal(cx, || {
-        kalosm::Chat::builder(model).with_system_prompt(assistant_description.clone()).build()
+        Chat::builder(model).with_system_prompt(assistant_description.clone()).build()
     });
 
     render! {
