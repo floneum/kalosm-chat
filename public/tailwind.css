@@ -618,6 +618,10 @@ video {
   padding: 1rem;
 }
 
+.text-right {
+  text-align: right;
+}
+
 .text-xl {
   font-size: 1.25rem;
   line-height: 1.75rem;

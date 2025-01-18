@@ -1,5 +1,7 @@
 #![allow(non_snake_case)]
 
+use std::time::Duration;
+
 use dioxus::{html::input_data::keyboard_types::Key, prelude::*, CapturedError};
 use kalosm::language::*;
 
@@ -156,23 +158,33 @@ fn Home(assistant_description: ReadOnlySignal<String>) -> Element {
                                     let mut messages_mut = messages.write();
                                     messages_mut.push(MessageState {
                                         user: User::User,
-                                        text: current_message
+                                        text: current_message,
+                                        response_time: None,
+                                        tokens: 0,
                                     });
                                     assistant_responding.set(true);
                                     let assistant_response = MessageState {
                                         user: User::Assistant,
                                         text: String::new(),
+                                        response_time: None,
+                                        tokens: 0,
                                     };
                                     messages_mut.push(assistant_response);
                                 }
                                 spawn(async move {
                                     if let Ok(chat) = &mut *chat.write() {
                                         let mut stream = chat.add_message(final_message);
+                                        let start = std::time::Instant::now();
                                         while let Some(new_text) = stream.next().await {
                                             let mut messages = messages.write();
                                             let Some(last_message) = messages.last_mut() else { break };
                                             last_message.text += &new_text;
+                                            last_message.tokens += 1;
                                         }
+                                        let response_time = start.elapsed();
+                                        let mut messages = messages.write();
+                                        let Some(last_message) = messages.last_mut() else { return };
+                                        last_message.response_time = Some(response_time);
                                     }
                                     assistant_responding.set(false);
                                 });
@@ -204,6 +216,8 @@ impl User {
 struct MessageState {
     user: User,
     text: String,
+    response_time: Option<Duration>,
+    tokens: usize,
 }
 
 #[component]
@@ -211,23 +225,37 @@ fn Message(message: ReadOnlySignal<MessageState>) -> Element {
     let message = message();
     let text = &message.text;
     let assistant_placeholder = message.user == User::Assistant && text.is_empty();
+    let tokens_per_second = message.response_time.map(|response_time| {
+        let tokens = message.tokens;
+        let seconds = response_time.as_secs_f64();
+        tokens as f64 / seconds
+    });
 
     rsx! {
         div {
-            class: "w-2/3 p-2 bg-white rounded-lg shadow-md",
-            class: if message.user == User::Assistant {
-                "self-start"
-            } else {
-                "self-end"
-            },
-            class: if assistant_placeholder {
-                "text-gray-400"
-            },
-            background_color: message.user.background_color(),
-            if assistant_placeholder {
-                "Thinking..."
-            } else {
-                "{text}"
+            class: "flex flex-row space-x-4",
+            div {
+                class: "w-2/3 p-2 bg-white rounded-lg shadow-md",
+                class: if message.user == User::Assistant {
+                    "self-start"
+                } else {
+                    "self-end"
+                },
+                class: if assistant_placeholder {
+                    "text-gray-400"
+                },
+                background_color: message.user.background_color(),
+                if assistant_placeholder {
+                    "Thinking..."
+                } else {
+                    "{text}"
+                }
+            }
+            if let Some(tokens_per_second) = tokens_per_second {
+                div {
+                    class: "text-right",
+                    "{tokens_per_second:02.0} tokens/s"
+                }
             }
         }
     }
