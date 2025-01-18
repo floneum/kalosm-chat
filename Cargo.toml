@@ -5,15 +5,13 @@ authors = ["Evan Almloff <evanalmloff@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-dioxus = { git = "https://github.com/DioxusLabs/dioxus" }
-dioxus-desktop = { git = "https://github.com/DioxusLabs/dioxus" }
-dioxus-router = { git = "https://github.com/DioxusLabs/dioxus" }
-dioxus-signals = { git = "https://github.com/DioxusLabs/dioxus" }
+dioxus = { version = "0.6", features = ["desktop", "router"] }
+kalosm = { git = "https://github.com/floneum/floneum", features = ["language"], rev = "2ccc8b1fed0acfe63e89addcc93eb4026410e518" }
 
-kalosm = { git = "https://github.com/floneum/floneum" }
+[features]
+metal = ["kalosm/metal"]
 
 [profile.release]
 lto = true
 opt-level = 3
-debug = true
 codegen-units = 1
