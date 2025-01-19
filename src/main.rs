@@ -256,8 +256,6 @@ fn Message(message: ReadOnlySignal<MessageState>) -> Element {
             ..Default::default()
         };
 
-        println!("{}", text);
-
         markdown_to_html_with_plugins(text, &options, &plugins)
     });
     let tokens_per_second = use_memo(move || {
