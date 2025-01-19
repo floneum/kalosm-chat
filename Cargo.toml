@@ -5,6 +5,7 @@ authors = ["Evan Almloff <evanalmloff@gmail.com>"]
 edition = "2021"
 
 [dependencies]
+comrak = "0.33.0"
 dioxus = { version = "0.6", features = ["desktop", "router"] }
 kalosm = { git = "https://github.com/floneum/floneum", features = ["language"], rev = "2ccc8b1fed0acfe63e89addcc93eb4026410e518" }
 

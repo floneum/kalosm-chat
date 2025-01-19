@@ -2,6 +2,10 @@
 
 use std::time::Duration;
 
+use comrak::{
+    markdown_to_html_with_plugins, plugins::syntect::SyntectAdapterBuilder, ExtensionOptions,
+    Plugins, RenderOptions,
+};
 use dioxus::{html::input_data::keyboard_types::Key, prelude::*, CapturedError};
 use kalosm::language::*;
 
@@ -112,7 +116,7 @@ fn Home(assistant_description: ReadOnlySignal<String>) -> Element {
     let mut assistant_responding = use_signal(|| false);
     let model = use_resource(|| async move {
         Llama::builder()
-            .with_source(LlamaSource::qwen_2_5_0_5b_instruct())
+            .with_source(LlamaSource::qwen_2_5_1_5b_instruct())
             .build()
             .await
     })
@@ -197,7 +201,7 @@ fn Home(assistant_description: ReadOnlySignal<String>) -> Element {
     }
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Copy)]
 enum User {
     Assistant,
     User,
@@ -222,36 +226,72 @@ struct MessageState {
 
 #[component]
 fn Message(message: ReadOnlySignal<MessageState>) -> Element {
-    let message = message();
-    let text = &message.text;
-    let assistant_placeholder = message.user == User::Assistant && text.is_empty();
-    let tokens_per_second = message.response_time.map(|response_time| {
-        let tokens = message.tokens;
-        let seconds = response_time.as_secs_f64();
-        tokens as f64 / seconds
+    let assistant_placeholder = use_memo(move || {
+        let message = message.read();
+        message.user == User::Assistant && message.text.is_empty()
+    });
+    let user = use_memo(move || message.read().user);
+    let contents = use_memo(move || {
+        let message = message();
+        let text = &message.text;
+        let mut plugins = Plugins::default();
+
+        let adapter = SyntectAdapterBuilder::new()
+            .theme("base16-ocean.dark")
+            .build();
+        plugins.render.codefence_syntax_highlighter = Some(&adapter);
+        let mut extension = ExtensionOptions::default();
+        extension.strikethrough = true;
+        extension.tagfilter = true;
+        extension.table = true;
+        extension.autolink = true;
+
+        let mut render = RenderOptions::default();
+        render.hardbreaks = true;
+        render.github_pre_lang = true;
+
+        let options = comrak::Options {
+            extension,
+            render,
+            ..Default::default()
+        };
+
+        println!("{}", text);
+
+        markdown_to_html_with_plugins(text, &options, &plugins)
+    });
+    let tokens_per_second = use_memo(move || {
+        let message = message.read();
+        message.response_time.map(|response_time| {
+            let tokens = message.tokens;
+            let seconds = response_time.as_secs_f64();
+            tokens as f64 / seconds
+        })
     });
 
     rsx! {
         div {
             class: "flex flex-row space-x-4",
             div {
-                class: "w-2/3 p-2 bg-white rounded-lg shadow-md",
-                class: if message.user == User::Assistant {
+                class: "w-2/3 p-2 bg-white rounded-lg shadow-md overflow-y-hidden overflow-x-scroll",
+                class: if user() == User::Assistant {
                     "self-start"
                 } else {
                     "self-end"
                 },
-                class: if assistant_placeholder {
+                class: if assistant_placeholder() {
                     "text-gray-400"
                 },
-                background_color: message.user.background_color(),
-                if assistant_placeholder {
+                background_color: user().background_color(),
+                if assistant_placeholder() {
                     "Thinking..."
                 } else {
-                    "{text}"
+                    div {
+                        dangerous_inner_html: contents
+                    }
                 }
             }
-            if let Some(tokens_per_second) = tokens_per_second {
+            if let Some(tokens_per_second) = tokens_per_second() {
                 div {
                     class: "text-right",
                     "{tokens_per_second:02.0} tokens/s"
