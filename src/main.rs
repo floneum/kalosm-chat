@@ -49,14 +49,48 @@ fn app() -> Element {
 enum Route {
     #[route("/")]
     Setup {},
-    #[route("/chat/:assistant_description")]
-    Home { assistant_description: String },
+    #[route("/chat/:user/:model_id/:file?:assistant_description")]
+    Home {
+        user: String,
+        model_id: String,
+        file: String,
+        assistant_description: String,
+    },
 }
 
 #[component]
 fn Setup() -> Element {
-    let mut assistant_description = use_signal(String::new);
     let navigator = use_navigator();
+    let mut user = use_signal(|| "bartowski".to_string());
+    let mut model_id = use_signal(|| "Qwen2.5-7B-Instruct-GGUF".to_string());
+    let mut file = use_signal(|| "Qwen2.5-7B-Instruct-Q4_K_M.gguf".to_string());
+    let mut assistant_description = use_signal(|| {
+        "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.".to_string()
+    });
+    let mut disabled = use_signal(|| false);
+    _ = use_resource(move || async move {
+        disabled.set(true);
+        _ = reqwest::get(format!("hf://{}/{}/{}", user(), model_id(), file()))
+            .await
+            .is_ok();
+        disabled.set(false);
+    });
+
+    let start_chat = move || {
+        if disabled() {
+            return;
+        }
+        navigator.push(Route::Home {
+            assistant_description: assistant_description(),
+            user: user(),
+            model_id: model_id(),
+            file: file(),
+        });
+    };
+
+    let mut model_input_mount: Signal<Option<std::rc::Rc<MountedData>>> = use_signal(|| None);
+    let mut file_input_mount: Signal<Option<std::rc::Rc<MountedData>>> = use_signal(|| None);
+    let mut description_input_mount: Signal<Option<std::rc::Rc<MountedData>>> = use_signal(|| None);
 
     rsx! {
         div {
@@ -67,6 +101,73 @@ fn Setup() -> Element {
 
                 div {
                     class: "flex flex-col space-y-4",
+
+                    div {
+                        class: "flex flex-row space-x-4 justify-between align-center items-center",
+                        label {
+                            class: "text-xl font-bold",
+                            "User"
+                        }
+                        input {
+                            class: "p-2 bg-white rounded-lg shadow-md",
+                            placeholder: "Type a user...",
+                            value: "{user}",
+                            oninput: move |event| {
+                                user.set(event.value())
+                            },
+                            onkeydown: move |event| async move {
+                                if event.key() == Key::Enter {
+                                    if let Some(mount) = model_input_mount() {
+                                        _ = mount.set_focus(true).await;
+                                    }
+                                }
+                            },
+                        }
+                        label {
+                            class: "text-xl font-bold",
+                            "Model"
+                        }
+                        input {
+                            class: "p-2 bg-white rounded-lg shadow-md",
+                            placeholder: "Type a model...",
+                            value: "{model_id}",
+                            oninput: move |event| {
+                                model_id.set(event.value())
+                            },
+                            onkeydown: move |event| async move {
+                                if event.key() == Key::Enter {
+                                    if let Some(mount) = file_input_mount() {
+                                        _ = mount.set_focus(true).await;
+                                    }
+                                }
+                            },
+                            onmounted: move |mount| {
+                                model_input_mount.set(Some(mount.data));
+                            },
+                        }
+                        label {
+                            class: "text-xl font-bold",
+                            "File"
+                        }
+                        input {
+                            class: "p-2 bg-white rounded-lg shadow-md",
+                            placeholder: "Type a file...",
+                            value: "{file}",
+                            oninput: move |event| {
+                                file.set(event.value())
+                            },
+                            onkeydown: move |event| async move {
+                                if event.key() == Key::Enter {
+                                    if let Some(mount) = description_input_mount() {
+                                        _ = mount.set_focus(true).await;
+                                    }
+                                }
+                            },
+                            onmounted: move |mount| {
+                                file_input_mount.set(Some(mount.data));
+                            },
+                        }
+                    }
 
                     label {
                         class: "text-xl font-bold",
@@ -82,25 +183,20 @@ fn Setup() -> Element {
                         },
                         onkeydown: move |event| {
                             if event.key() == Key::Enter {
-                                navigator.push(Route::Home {
-                                    assistant_description: assistant_description().clone(),
-                                });
+                                start_chat();
                             }
+                        },
+                        onmounted: move |mount| {
+                            description_input_mount.set(Some(mount.data));
                         },
                     }
 
                     button {
                         class: "p-2 bg-white rounded-lg shadow-md",
                         onclick: move |_| {
-                            let assistant_description = assistant_description().clone();
-                            navigator.push(Route::Home {
-                                assistant_description: if assistant_description.is_empty() {
-                                    "Always assist with care, respect, and truth. Respond with utmost utility yet securely. Avoid harmful, unethical, prejudiced, or negative content. Ensure replies promote fairness and positivity.".to_string()
-                                } else {
-                                    assistant_description
-                                },
-                            });
+                            start_chat()
                         },
+                        disabled,
                         "Start Chatting"
                     }
                 }
@@ -110,13 +206,22 @@ fn Setup() -> Element {
 }
 
 #[component]
-fn Home(assistant_description: ReadOnlySignal<String>) -> Element {
+fn Home(
+    user: ReadOnlySignal<String>,
+    model_id: ReadOnlySignal<String>,
+    file: ReadOnlySignal<String>,
+    assistant_description: ReadOnlySignal<String>,
+) -> Element {
     let mut current_message = use_signal(String::new);
     let mut messages: Signal<Vec<MessageState>> = use_signal(Vec::new);
     let mut assistant_responding = use_signal(|| false);
-    let model = use_resource(|| async move {
+    let model = use_resource(move || async move {
         Llama::builder()
-            .with_source(LlamaSource::qwen_2_5_1_5b_instruct())
+            .with_source(LlamaSource::new(FileSource::huggingface(
+                format!("{user}/{model_id}"),
+                "main",
+                file,
+            )))
             .build()
             .await
     })
