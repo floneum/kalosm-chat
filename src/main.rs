@@ -229,7 +229,14 @@ fn Home(
     let mut chat: Signal<Result<Chat<Llama>, CapturedError>> = use_signal(move || {
         let read = model.read();
         match &*read {
-            Ok(model) => Ok(model.chat().with_system_prompt(assistant_description())),
+            Ok(model) => {
+                let mut chat = model.chat();
+                let assistant_description = assistant_description();
+                if !assistant_description.is_empty() {
+                    chat = chat.with_system_prompt(assistant_description);
+                }
+                Ok(chat)
+            },
             Err(e) => Err(CapturedError::from_display(e.to_string())),
         }
     });
