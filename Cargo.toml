@@ -8,7 +8,18 @@ edition = "2021"
 
 [dependencies]
 dioxus = { version = "0.7.0-alpha.3", features = ["router"] }
-dioxus-native = { version = "0.7.0-alpha.3", features = ["default"] }
+
+# Only include native feature when targeting iOS
+[target.'cfg(target_os = "ios")'.dependencies.dioxus]
+version = "0.7.0-alpha.3"
+features = [
+    "router",
+    # "native",
+    ]
+    
+# iOS-specific dependencies
+[target.'cfg(target_os = "ios")'.dependencies]
+metal = "0.32.0"
 
 [features]
 default = ["mobile"]
