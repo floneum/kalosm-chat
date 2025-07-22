@@ -1,40 +1,19 @@
 [application]
-
 # App (Project) Name
 name = "auto-note"
-
-# Dioxus App Default Platform
-# desktop, web
-
-default_platform = "desktop"
-
-# `build` & `serve` dist path
-out_dir = "dist"
-
-# resource (public) file folder
-asset_dir = "public"
 
 [web.app]
 
 # HTML title tag content
-title = "auto-note"
-
-[web.watcher]
-
-# when watcher trigger, regenerate the `index.html`
-reload_html = true
-
-# which files or dirs will be watcher monitoring
-watch_path = ["src", "public"]
+title = "kalosm-chat"
 
 # include `assets` in web platform
 [web.resource]
 
-# CSS style file
+# Additional CSS style files
+style = []
 
-style = ["tailwind.css"]
-
-# Javascript code file
+# Additional JavaScript files
 script = []
 
 [web.resource.dev]

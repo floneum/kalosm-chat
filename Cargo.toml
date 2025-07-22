@@ -1,19 +1,29 @@
 [package]
 name = "kalosm-chat"
 version = "0.1.0"
-authors = ["Evan Almloff <evanalmloff@gmail.com>"]
+authors = ["jermsam <ssali@jitpomi.com>"]
 edition = "2021"
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [dependencies]
-comrak = "0.33.0"
-dioxus = { version = "0.6", features = ["desktop", "router"] }
-kalosm = { git = "https://github.com/floneum/floneum", features = ["language"], rev = "c10046e" }
-reqwest = "0.12.12"
+dioxus = { version = "0.7.0-alpha.3", features = ["router"] }
+dioxus-native = { version = "0.7.0-alpha.3", features = ["default"] }
 
 [features]
-metal = ["kalosm/metal"]
+default = ["mobile"]
+web = ["dioxus/web"]
+desktop = ["dioxus/desktop"]
+mobile = ["dioxus/mobile"]
 
-[profile.release]
-lto = true
-opt-level = 3
-codegen-units = 1
+[profile]
+
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1
+
+[profile.server-dev]
+inherits = "dev"
+
+[profile.android-dev]
+inherits = "dev"
