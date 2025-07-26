@@ -1,10 +1,12 @@
+mod components;
+
 use dioxus::prelude::*;
-#[cfg(target_os = "ios")]
+#[cfg(any(target_os = "ios", target_os = "macos"))]
 use metal::*;
 
 fn main() {
     // Only run metal detection on iOS devices
-    #[cfg(target_os = "ios")]
+    #[cfg(any(target_os = "ios", target_os = "macos"))]
     detect_metal();
     
     launch(app);
@@ -35,9 +37,9 @@ fn Home() -> Element {
     }
 }
 
-#[cfg(target_os = "ios")]
-#[allow(dead_code)]
+#[cfg(any(target_os = "ios", target_os = "macos"))]
 fn detect_metal() {
+    println!("Detecting Metal...");
     if let Some(device) = Device::system_default() {
         println!("✅ Metal device found: {}", device.name());
     } else {
