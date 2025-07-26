@@ -14,6 +14,4 @@ Cargo.lock
 
 /target
 **/.env
-
-# JetBrains IDEs
-.idea/
+.idea

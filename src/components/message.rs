@@ -61,9 +61,9 @@ pub struct MessageProps {
 pub fn Message(props: MessageProps) -> Element {
     let is_user = props.chat.is_user;
     let bubble_classes = if is_user {
-        "rounded-xl px-4 py-2 shadow-sm text-sm break-words whitespace-pre-wrap bg-indigo-500 text-white ml-auto min-w-[80px] max-w-full overflow-hidden"
+        "rounded-xl px-4 py-2 shadow-sm text-sm break-words whitespace-pre-wrap bg-indigo-500 text-white ml-auto min-w-[80px] max-w-full"
     } else {
-        "rounded-xl px-4 py-2 shadow-sm text-sm break-words whitespace-pre-wrap bg-zinc-600 text-gray-100 mr-auto min-w-[80px] max-w-full overflow-hidden"
+        "rounded-xl px-4 py-2 shadow-sm text-sm break-words whitespace-pre-wrap bg-zinc-600 text-gray-100 mr-auto min-w-[80px] max-w-full"
     };
 
     rsx! {
@@ -114,13 +114,7 @@ pub fn Message(props: MessageProps) -> Element {
                     } else {
                         match &props.chat.content {
                             MessageContent::Text(text) => rsx! {
-                                div {
-                                    dangerous_inner_html: markdown_to_html_with_plugins(
-                                        text,
-                                        &ComrakOptions::default(),
-                                        &ComrakPlugins::default()
-                                    )
-                                }
+                                div { "{text}" }
                             },
                             MessageContent::Error(error) => rsx! {
                                 div {
