@@ -1,10 +1,10 @@
-use dioxus::document::eval;
+
 use dioxus::prelude::*;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
-use kalosm::language::{FileSource, Llama, LlamaSource, Chat};
+use kalosm::language::{ Llama,};
 use kalosm::language::ChatModelExt;
-use serde::{Deserialize, Serialize};
 use crate::components::*;
+
 
 #[derive(Clone, Debug, PartialEq)]
 enum ProcessingState {
@@ -26,7 +26,7 @@ pub fn Home() -> Element {
 
     // Enhanced Chat - Personas and System Prompts
     let mut current_persona = use_signal(|| "buddy".to_string());
-    let _conversation_context = use_signal(|| Vec::<String>::new()); // Track conversation topics
+
 
     // System prompt generator for different personas
     let get_system_prompt = move |persona: &str| -> String {
@@ -35,28 +35,13 @@ pub fn Home() -> Element {
             _ => "Hey! I'm your friendly chat buddy who's here to help and have great conversations with you.".to_string(),
         }
     };
-    // Model settings - balanced model (smart but fast)
-    let mut model_id = use_signal(|| "Qwen/Qwen2.5-0.5B-Instruct-GGUF".to_string());
-    let mut file = use_signal(|| "qwen2.5-0.5b-instruct-q4_0.gguf".to_string());
 
-    // Chat context - maintain conversation history
-    #[cfg(any(target_os = "ios", target_os = "macos"))]
-    let mut chat_context = use_signal(|| None::<Chat<Llama>>);
 
     // Model loading using Kalosm 0.4 format - now works on all platforms including iOS
     #[cfg(any(target_os = "ios", target_os = "macos"))]
     let model = use_resource(move || {
-        let model_id_val = model_id.read().clone();
-        let file_val = file.read().clone();
-     
         async move {
-            Llama::builder()
-                .with_source(LlamaSource::new(FileSource::HuggingFace {
-                    model_id: model_id_val.to_string(),
-                    revision: "main".to_string(),
-                    file: file_val.to_string(),
-                }))
-                .build()
+            Llama::new_chat()
                 .await
         }
     });
@@ -74,24 +59,24 @@ pub fn Home() -> Element {
         spawn(async move {
             // We spawn up another thread for the bot response since user does not have to wait for chat to finish
             match model.read().as_ref() {
-              None => {},
+              None => {
+                messages.write().push(ChatMessage {
+                    content: MessageContent::Error("Model is still loading, please wait...".to_string()),
+                    is_user: false,
+                    tokens_per_second: None,
+                    timestamp: "now".to_string(),
+                });
+              },
               Some(model) => {
                     match model { 
                         Ok(model_instance) => {
-                            // Get or create chat context with enhanced system prompt
+                            // create chat context with enhanced system prompt
                             let mut chat = {
-                                let context_read = chat_context.read();
-                                if let Some(existing_chat) = context_read.as_ref() {
-                                    existing_chat.clone()
-                                } else {
-                                    drop(context_read); // Release the read lock
-                                    // Create new chat with persona-based system prompt
-                                    let system_prompt = get_system_prompt(&current_persona());
-                                    let new_chat = model_instance.chat()
-                                        .with_system_prompt(system_prompt);
-                                    chat_context.set(Some(new_chat.clone()));
-                                    new_chat
-                                }
+                                 // Create new chat with persona-based system prompt
+                                 let system_prompt = get_system_prompt(&current_persona());
+                                 let new_chat = model_instance.chat()
+                                     .with_system_prompt(system_prompt);
+                                 new_chat
                             };
                             
                             // Send the message to the chat and get the response
@@ -107,9 +92,6 @@ pub fn Home() -> Element {
                                        tokens_per_second: Some(25.0),
                                        timestamp: "now".to_string(),
                                    });
-
-                                   // Update chat context
-                                   chat_context.set(Some(chat));
                                    // Auto-scroll is handled by the use_effect hook
                                },
                                Err(e) => {
@@ -155,8 +137,8 @@ pub fn Home() -> Element {
 
             // Header
             div {
-                class: "p-4 border-b text-white border-zinc-700  text-xl font-semibold",
-                "chat"
+                class: "px-4 py-2 border-b text-white border-zinc-700  text-xl font-semibold",
+                "Kalosm Chat"
             }
 
             // Message list - use a regular div with overflow
@@ -166,8 +148,9 @@ pub fn Home() -> Element {
                 // This key forces the component to re-render when messages_count changes
                 // which helps with scrolling in some implementations
                 key: "{messages_count}",
-                for message in messages.read().iter() {
+                for (i, message) in messages.read().iter().enumerate() {
                     Message {
+                          key: "{i}",
                         chat : message.clone()
                     }
                 }
@@ -194,8 +177,8 @@ pub fn Home() -> Element {
                         class: "flex items-center space-x-2",
                         
                         // Attachment button (left side)
-                        button {
-                            class: "p-2 text-white rounded transition-colors flex-shrink-0",
+                        p {
+                            class: "p-2 text-white rounded cursor-pointer transition-colors flex-shrink-0",
                            
                             onclick: move |_| {
                                 show_attachment_menu.set(!show_attachment_menu());
