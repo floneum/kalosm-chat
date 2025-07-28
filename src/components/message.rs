@@ -1,9 +1,6 @@
-
 use dioxus::prelude::*;
-use comrak::{markdown_to_html_with_plugins, ComrakOptions, ComrakPlugins};
 use serde::{Deserialize, Serialize};
-use crate::components::avatar::Avatar;
-
+use crate::components::*;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum MessageContent {

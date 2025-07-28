@@ -1,50 +1,154 @@
+use dioxus::document::eval;
 use dioxus::prelude::*;
+#[cfg(any(target_os = "ios", target_os = "macos"))]
+use kalosm::language::{FileSource, Llama, LlamaSource, Chat};
+use kalosm::language::ChatModelExt;
+use serde::{Deserialize, Serialize};
 use crate::components::*;
-use crate::data;
 
+#[derive(Clone, Debug, PartialEq)]
+enum ProcessingState {
+    Idle,
+    ProcessingText,
+    ProcessingImage,
+    ProcessingAudio,
+    ProcessingFile,
+    GeneratingImage,
+    ScrapingWeb,
+    ExtractingData,
+}
 #[component]
 pub fn Home() -> Element {
-    let messages = vec![
-        ChatMessage {
-            is_user: true,
-            content: MessageContent::Text("Hello, bot!".to_string()),
-            timestamp: "10:00 AM".to_string(),
-            tokens_per_second: None,
-        },
-        ChatMessage {
-            is_user: false,
-            content: MessageContent::Text("Hello! How can I help you today? Here's some **bold** text and `code`.".to_string()),
-            timestamp: "10:01 AM".to_string(),
-            tokens_per_second: Some(150.3),
-        },
-        ChatMessage {
-            is_user: true,
-            content: MessageContent::Image {
-                data: data::mock_image::MOCK_IMAGE.to_string(),
-                caption: Some("A single pixel".to_string()),
-                analysis: Some("This is a 1x1 black pixel.".to_string()),
-            },
-            timestamp: "10:03 AM".to_string(),
-            tokens_per_second: None,
-        },
-        ChatMessage {
-            is_user: false,
-            content: MessageContent::Audio {
-                data: "".to_string(),
-                duration: Some(5.2),
-                transcription: Some("This is a test audio message.".to_string()),
-            },
-            timestamp: "10:04 AM".to_string(),
-            tokens_per_second: None,
-        },
-        ChatMessage {
-            is_user: false,
-            content: MessageContent::Error("I'm sorry, I couldn't process that request.".to_string()),
-            timestamp: "10:05 AM".to_string(),
-            tokens_per_second: None,
-        },
-    ];
+    let mut messages = use_signal(|| Vec::<ChatMessage>::new());
+    let mut is_loading = use_signal(|| false);
+    let mut show_attachment_menu = use_signal(|| false);
+    let _processing_state = use_signal(|| ProcessingState::Idle);
 
+    // Enhanced Chat - Personas and System Prompts
+    let mut current_persona = use_signal(|| "buddy".to_string());
+    let _conversation_context = use_signal(|| Vec::<String>::new()); // Track conversation topics
+
+    // System prompt generator for different personas
+    let get_system_prompt = move |persona: &str| -> String {
+        match persona {
+            "buddy" => "Hey! I'm your friendly chat buddy who loves having genuine conversations. I'm curious, supportive, and always up for a good chat about anything. I keep things real and fun while being genuinely helpful. Think of me as that friend who's always got your back!".to_string(),
+            _ => "Hey! I'm your friendly chat buddy who's here to help and have great conversations with you.".to_string(),
+        }
+    };
+    // Model settings - balanced model (smart but fast)
+    let mut model_id = use_signal(|| "Qwen/Qwen2.5-0.5B-Instruct-GGUF".to_string());
+    let mut file = use_signal(|| "qwen2.5-0.5b-instruct-q4_0.gguf".to_string());
+
+    // Chat context - maintain conversation history
+    #[cfg(any(target_os = "ios", target_os = "macos"))]
+    let mut chat_context = use_signal(|| None::<Chat<Llama>>);
+
+    // Model loading using Kalosm 0.4 format - now works on all platforms including iOS
+    #[cfg(any(target_os = "ios", target_os = "macos"))]
+    let model = use_resource(move || {
+        let model_id_val = model_id.read().clone();
+        let file_val = file.read().clone();
+     
+        async move {
+            Llama::builder()
+                .with_source(LlamaSource::new(FileSource::HuggingFace {
+                    model_id: model_id_val.to_string(),
+                    revision: "main".to_string(),
+                    file: file_val.to_string(),
+                }))
+                .build()
+                .await
+        }
+    });
+
+    let mut send_message = move |msg: String| {
+        let message =  ChatMessage {
+            content: MessageContent::Text(msg.clone()),
+            is_user: true,
+            tokens_per_second: None,
+            timestamp: "now".to_string(),
+        }; 
+        messages.write().push(message);
+        is_loading.set(true);
+        
+        spawn(async move {
+            // We spawn up another thread for the bot response since user does not have to wait for chat to finish
+            match model.read().as_ref() {
+              None => {},
+              Some(model) => {
+                    match model { 
+                        Ok(model_instance) => {
+                            // Get or create chat context with enhanced system prompt
+                            let mut chat = {
+                                let context_read = chat_context.read();
+                                if let Some(existing_chat) = context_read.as_ref() {
+                                    existing_chat.clone()
+                                } else {
+                                    drop(context_read); // Release the read lock
+                                    // Create new chat with persona-based system prompt
+                                    let system_prompt = get_system_prompt(&current_persona());
+                                    let new_chat = model_instance.chat()
+                                        .with_system_prompt(system_prompt);
+                                    chat_context.set(Some(new_chat.clone()));
+                                    new_chat
+                                }
+                            };
+                            
+                            // Send the message to the chat and get the response
+                            // Add the response to the messages list
+                            match chat.add_message(msg).await {
+                               Ok(response) => {
+                                   let response_text = response;
+
+                                   // Add the actual response message
+                                   messages.write().push(ChatMessage {
+                                       content: MessageContent::Text(response_text),
+                                       is_user: false,
+                                       tokens_per_second: Some(25.0),
+                                       timestamp: "now".to_string(),
+                                   });
+
+                                   // Update chat context
+                                   chat_context.set(Some(chat));
+                                   // Auto-scroll is handled by the use_effect hook
+                               },
+                               Err(e) => {
+                                    messages.write().push(ChatMessage {
+                                        content: MessageContent::Error(format!("Model failed to respond - {}", e)),
+                                        is_user: false,
+                                        tokens_per_second: None,
+                                        timestamp: "now".to_string(),
+                                    });
+                               }    
+                            } 
+                        },
+                        Err(e) => {
+                            messages.write().push(ChatMessage {
+                                content: MessageContent::Error(format!("Model failed to load - {}", e)),
+                                is_user: false,
+                                tokens_per_second: None,
+                                timestamp: "now".to_string(),
+                            });
+                        }
+                    }
+              },
+            }
+            is_loading.set(false);
+        });
+        
+
+    };
+
+
+    // For auto-scrolling in native mode, we'll use a simpler approach
+    // Create a signal to track if we need to scroll
+    let mut messages_count = use_signal(|| 0);
+    
+    // Update the count whenever messages change
+    use_effect(move || {
+        messages_count.set(messages.read().len());
+    });
+    
     rsx! {
         div {
             class: "flex flex-col h-screen bg-[#2A2928]",
@@ -55,35 +159,59 @@ pub fn Home() -> Element {
                 "chat"
             }
 
-            // Message list
+            // Message list - use a regular div with overflow
             div {
+                id: "messages-container",
                 class: "flex-1 p-4 overflow-y-auto",
-                for message in messages {
+                // This key forces the component to re-render when messages_count changes
+                // which helps with scrolling in some implementations
+                key: "{messages_count}",
+                for message in messages.read().iter() {
                     Message {
-
-                        chat: message
+                        chat : message.clone()
                     }
                 }
+                if is_loading() {
                 // Typing indicator example
-                Message {
-                    chat: ChatMessage {
-                        is_user: false,
-                        content: MessageContent::Text("".to_string()),
-                        timestamp: "".to_string(),
-                        tokens_per_second: None,
-                    },
-                    is_typing: true
+                    Message {
+                        chat: ChatMessage {
+                            is_user: false,
+                            content: MessageContent::Text("".to_string()),
+                            timestamp: "".to_string(),
+                            tokens_per_second: None,
+                        },
+                        is_typing: true
+                    }
                 }
             }
 
-            // Input area (placeholder)
-            div {
-                class: "p-4 border-t border-zinc-700",
-                div {
-                    class: "bg-zinc-700 rounded-lg p-4 text-white",
-                    "Message input..."
-                }
+             div {
+                    class: "px-4 py-3 border-b",
+                    style: "border-color: #3f4147;",
+                    
+                    // Input field with integrated attachment controls
+                    div {
+                        class: "flex items-center space-x-2",
+                        
+                        // Attachment button (left side)
+                        button {
+                            class: "p-2 text-white rounded transition-colors flex-shrink-0",
+                           
+                            onclick: move |_| {
+                                show_attachment_menu.set(!show_attachment_menu());
+                            },
+                            if show_attachment_menu() { "×" } else { "+" }
+                        }
+                        
+                        // Main input field container with integrated send button
+                       TextInput {
+                        placeholder: "Ask anything...".to_string(),
+                        on_save: move |input| send_message(input),
+                       }
+                       
+                    }
             }
+
         }
     }
 }

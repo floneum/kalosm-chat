@@ -9,8 +9,8 @@ edition = "2021"
 [dependencies]
 comrak = "0.40.0"
 dioxus = { version = "0.7.0-alpha.3", features = ["router"] }
-kalosm = { version = "0.4.0", default-features = false}
 serde = { version = "1.0.219", features = ["derive"] }
+#kalosm = { version = "0.4.0", default-features = false, features = ["language","llama"] }
 
 # Only include native feature for iOS and macOS
 [target.'cfg(any(target_os = "ios", target_os = "macos"))'.dependencies.dioxus]
