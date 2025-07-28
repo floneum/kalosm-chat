@@ -1,7 +1,9 @@
 [package]
+description = "A simple chat application using Dioxus and Kalosm."
+license = "MIT"
 name = "kalosm-chat"
 version = "0.1.0"
-authors = ["jermsam <ssali@jitpomi.com>"]
+authors = ["Evan Almloff <evanalmloff@gmail.com>"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
