@@ -71,7 +71,7 @@ pub fn Message(props: MessageProps) -> Element {
             // Avatar (trailing or leading based on user)
             if !is_user {
                 Avatar {
-                    is_bot: true,
+                    is_user: false,
                     class: Some("ring-2 bg-zinc-600 ring-gray-400".into()),
                     style: Some("box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);".into()),
                     label: Some(rsx!(
@@ -174,7 +174,7 @@ pub fn Message(props: MessageProps) -> Element {
             // Trailing Avatar if user
             if is_user {
                 Avatar {
-                    is_bot: false,
+                    is_user: true,
                     class: Some("ring-2 ring-yellow-400".into()),
                     style: Some("box-shadow: 0 0 6px rgba(255, 200, 0, 0.5);".into()),
                     label: Some(rsx!(

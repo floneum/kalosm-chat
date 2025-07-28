@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 #[derive(Props, PartialEq, Clone)]
 pub struct AvatarProps {
-    pub is_bot: bool,
+    pub is_user: bool,
     #[props(optional)]
     pub class: Option<String>,
     #[props(optional)]
@@ -15,13 +15,13 @@ pub struct AvatarProps {
 
 #[component]
 pub fn Avatar(props: AvatarProps) -> Element {
-    let default_style = if props.is_bot {
+    let default_style = if !props.is_user {
         "background: #40444b;"
     } else {
         "background: linear-gradient(135deg, #7289da, #5865f2);"
     };
 
-    let default_label = if props.is_bot {
+    let default_label = if !props.is_user {
         rsx!( "🤖" )
     } else {
         rsx!( "You" )

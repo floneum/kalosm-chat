@@ -177,7 +177,7 @@ pub fn Home() -> Element {
                         class: "flex items-center space-x-2",
                         
                         // Attachment button (left side)
-                        p {
+                        button {
                             class: "p-2 text-white rounded cursor-pointer transition-colors flex-shrink-0",
                            
                             onclick: move |_| {
