@@ -15,10 +15,16 @@ fn main() {
 
 fn app() -> Element {
     rsx! {
-        document::Link {
-            rel: "stylesheet",
-            href: asset!("public/tailwind.css"),
-        }
+        // document::Link {
+        //     rel: "stylesheet",
+        //     href: asset!("public/tailwind.css"),
+        // }
+                // The Stylesheet component inserts a style link into the head of the document
+        document::Stylesheet {
+             rel: "stylesheet",
+            // Urls are relative to your Cargo.toml file
+            href: asset!("/assets/tailwind.css")
+        },
         document::Link {
             rel: "stylesheet",
             href: asset!("public/loading.css"),
@@ -383,7 +389,7 @@ fn Message(message: ReadOnlySignal<MessageState>) -> Element {
         div {
             class: "flex flex-row space-x-4",
             div {
-                class: "w-2/3 p-2 bg-white rounded-lg shadow-md overflow-y-hidden overflow-x-scroll",
+                class: "w-2/3 p-2  rounded-lg shadow-md overflow-y-hidden overflow-x-scroll",
                 class: if user() == User::Assistant {
                     "self-start"
                 } else {
@@ -397,7 +403,7 @@ fn Message(message: ReadOnlySignal<MessageState>) -> Element {
                     "Thinking..."
                 } else {
                     div {
-                        dangerous_inner_html: contents
+                        "{contents}"
                     }
                 }
             }
