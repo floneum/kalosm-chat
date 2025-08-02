@@ -7,6 +7,7 @@ use comrak::{
 };
 use dioxus::{html::input_data::keyboard_types::Key, prelude::*, CapturedError};
 use kalosm::language::*;
+use dioxus::document::eval;
 
 fn main() {
     launch(app);
@@ -239,12 +240,27 @@ fn Home(
         }
     });
 
+    use_effect(move || {
+        let messages_len = messages.read().len();
+        if messages_len > 0 {
+            let _ = eval(r#"
+                setTimeout(() => {
+                    const container = document.querySelector('.overflow-y-auto');
+                    if (container) {
+                        container.scrollTop = container.scrollHeight;
+                    }
+                }, 100);
+            "#);
+        }
+    });
+
     rsx! {
         div {
             class: "flex flex-col h-screen bg-gray-100",
 
             div {
                 class: "flex-1 p-10 space-y-4 overflow-y-auto",
+                id: "messages-container",
                 for message in messages.read().iter().cloned() {
                     Message {
                         message,
