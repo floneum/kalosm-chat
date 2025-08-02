@@ -14,15 +14,8 @@ fn main() {
 
 fn app() -> Element {
     rsx! {
-         // The Stylesheet component inserts a style link into the head of the document
         document::Stylesheet {
-             rel: "stylesheet",
-            // Urls are relative to your Cargo.toml file
-            href: asset!("/assets/tailwind.css")
-        },
-        document::Link {
-            rel: "stylesheet",
-            href: asset!("public/loading.css"),
+            href: asset!("/assets/tailwind.css"),
         }
         ErrorBoundary {
             handle_error: |error| rsx! {
@@ -34,9 +27,9 @@ fn app() -> Element {
             SuspenseBoundary {
                 fallback: |_| rsx! {
                     div {
-                        class: "w-screen h-screen flex flex-col items-center justify-center",
+                        class: "flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-200",
                         div {
-                            class: "spinner",
+                            class: "animate-spin rounded-full h-32 w-32 border-t-4 border-b-4 border-[#2B2A28]"
                         }
                     }
                 },
@@ -95,27 +88,33 @@ fn Setup() -> Element {
 
     rsx! {
         div {
-            class: "flex flex-col h-screen bg-slate-300",
-
+            class: "flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-200",
             div {
-                class: "flex flex-col flex-1 p-4 space-y-4 overflow-y-auto",
+                class: "w-full max-w-md p-6 space-y-2 bg-white rounded-2xl shadow-2xl",
+                div {
+                    class: "text-center",
+                    h1 {
+                        class: "text-2xl font-bold text-gray-800",
+                        "Configure Your Assistant"
+                    }
+                    p {
+                        class: "text-sm text-gray-500",
+                        "Set the model parameters to start"
+                    }
+                }
 
                 div {
-                    class: "flex flex-col space-y-4",
-
+                    class: "space-y-2",
                     div {
-                        class: "flex flex-row space-x-4 justify-between align-center items-center",
                         label {
-                            class: "text-xl font-bold",
-                            "User"
+                            class: "block text-xs font-medium text-gray-600",
+                            "Hugging Face User (Optional)"
                         }
                         input {
-                            class: "p-2 bg-white rounded-lg shadow-md",
-                            placeholder: "Type a user...",
+                            class: "w-full px-1 py-1 text-sm text-gray-800 bg-transparent border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-[#2B2A28] transition-colors",
+                            placeholder: "e.g., bartowski",
                             value: "{user}",
-                            oninput: move |event| {
-                                user.set(event.value())
-                            },
+                            oninput: move |event| user.set(event.value()),
                             onkeydown: move |event| async move {
                                 if event.key() == Key::Enter {
                                     if let Some(mount) = model_input_mount() {
@@ -124,17 +123,18 @@ fn Setup() -> Element {
                                 }
                             },
                         }
+                    }
+
+                    div {
                         label {
-                            class: "text-xl font-bold",
-                            "Model"
+                            class: "block text-xs font-medium text-gray-600",
+                            "Model ID"
                         }
                         input {
-                            class: "p-2 bg-white rounded-lg shadow-md",
-                            placeholder: "Type a model...",
+                            class: "w-full px-1 py-1 text-sm text-gray-800 bg-transparent border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-[#2B2A28] transition-colors",
+                            placeholder: "e.g., Qwen2.5-7B-Instruct-GGUF",
                             value: "{model_id}",
-                            oninput: move |event| {
-                                model_id.set(event.value())
-                            },
+                            oninput: move |event| model_id.set(event.value()),
                             onkeydown: move |event| async move {
                                 if event.key() == Key::Enter {
                                     if let Some(mount) = file_input_mount() {
@@ -142,21 +142,20 @@ fn Setup() -> Element {
                                     }
                                 }
                             },
-                            onmounted: move |mount| {
-                                model_input_mount.set(Some(mount.data));
-                            },
+                            onmounted: move |mount| model_input_mount.set(Some(mount.data)),
                         }
+                    }
+
+                    div {
                         label {
-                            class: "text-xl font-bold",
-                            "File"
+                            class: "block text-xs font-medium text-gray-600",
+                            "Model File"
                         }
                         input {
-                            class: "p-2 bg-white rounded-lg shadow-md",
-                            placeholder: "Type a file...",
+                            class: "w-full px-1 py-1 text-sm text-gray-800 bg-transparent border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-[#2B2A28] transition-colors",
+                            placeholder: "e.g., Qwen2.5-7B-Instruct-Q4_K_M.gguf",
                             value: "{file}",
-                            oninput: move |event| {
-                                file.set(event.value())
-                            },
+                            oninput: move |event| file.set(event.value()),
                             onkeydown: move |event| async move {
                                 if event.key() == Key::Enter {
                                     if let Some(mount) = description_input_mount() {
@@ -164,41 +163,39 @@ fn Setup() -> Element {
                                     }
                                 }
                             },
-                            onmounted: move |mount| {
-                                file_input_mount.set(Some(mount.data));
-                            },
+                            onmounted: move |mount| file_input_mount.set(Some(mount.data)),
                         }
                     }
 
-                    label {
-                        class: "text-xl font-bold",
-                        "Assistant Description"
-                    }
-
-                    input {
-                        class: "p-2 bg-white rounded-lg shadow-md",
-                        placeholder: "Type a description...",
-                        value: "{assistant_description}",
-                        oninput: move |event| {
-                            assistant_description.set(event.value())
-                        },
-                        onkeydown: move |event| {
-                            if event.key() == Key::Enter {
-                                start_chat();
-                            }
-                        },
-                        onmounted: move |mount| {
-                            description_input_mount.set(Some(mount.data));
-                        },
+                    div {
+                        label {
+                            class: "block text-xs font-medium text-gray-600",
+                            "Assistant Persona"
+                        }
+                        textarea {
+                            class: "w-full px-1 py-1 text-sm text-gray-800 bg-transparent border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-[#2B2A28] transition-colors resize-none",
+                            placeholder: "Describe your assistant's personality...",
+                            rows: 2,
+                            value: "{assistant_description}",
+                            oninput: move |event| assistant_description.set(event.value()),
+                            onkeydown: move |event| {
+                                if event.key() == Key::Enter && !event.modifiers().shift() {
+                                    start_chat();
+                                }
+                            },
+                            onmounted: move |mount| description_input_mount.set(Some(mount.data)),
+                        }
                     }
 
                     button {
-                        class: "p-2 bg-white rounded-lg shadow-md",
-                        onclick: move |_| {
-                            start_chat()
-                        },
-                        disabled,
-                        "Start Chatting"
+                        class: "w-full px-4 py-2 mt-4 font-bold text-white bg-[#2B2A28] rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2B2A28] transition-all duration-300 transform hover:shadow-lg hover:-translate-y-1 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none",
+                        onclick: move |_| start_chat(),
+                        disabled: disabled(),
+                        if disabled() {
+                            "Verifying Model..."
+                        } else {
+                            "Start Chatting"
+                        }
                     }
                 }
             }
@@ -339,7 +336,7 @@ impl User {
     fn token_color(&self) -> &'static str {
         match self {
             User::Assistant => "text-gray-500",
-            User::User => "text-blue-200",
+            User::User => "text-gray-400",
         }
     }
 }
