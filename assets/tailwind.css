@@ -11,9 +11,13 @@
     --color-blue-500: oklch(62.3% 0.214 259.815);
     --color-slate-300: oklch(86.9% 0.022 252.894);
     --color-gray-100: oklch(96.7% 0.003 264.542);
-    --color-gray-400: oklch(70.7% 0.022 261.325);
+    --color-gray-200: oklch(92.8% 0.006 264.531);
+    --color-gray-300: oklch(87.2% 0.01 258.338);
     --color-white: #fff;
     --spacing: 0.25rem;
+    --container-4xl: 56rem;
+    --text-xs: 0.75rem;
+    --text-xs--line-height: calc(1 / 0.75);
     --text-xl: 1.25rem;
     --text-xl--line-height: calc(1.75 / 1.25);
     --font-weight-bold: 700;
@@ -186,14 +190,17 @@
   .h-screen {
     height: 100vh;
   }
-  .w-2\/3 {
-    width: calc(2/3 * 100%);
-  }
   .w-screen {
     width: 100vw;
   }
+  .max-w-\[90\%\] {
+    max-width: 90%;
+  }
   .flex-1 {
     flex: 1;
+  }
+  .flex-grow {
+    flex-grow: 1;
   }
   .flex-col {
     flex-direction: column;
@@ -209,6 +216,12 @@
   }
   .justify-center {
     justify-content: center;
+  }
+  .justify-end {
+    justify-content: flex-end;
+  }
+  .justify-start {
+    justify-content: flex-start;
   }
   .space-y-4 {
     :where(& > :not(:last-child)) {
@@ -226,9 +239,6 @@
   }
   .self-end {
     align-self: flex-end;
-  }
-  .self-start {
-    align-self: flex-start;
   }
   .overflow-x-scroll {
     overflow-x: scroll;
@@ -260,12 +270,16 @@
   .p-4 {
     padding: calc(var(--spacing) * 4);
   }
-  .text-right {
-    text-align: right;
+  .pt-1 {
+    padding-top: calc(var(--spacing) * 1);
   }
   .text-xl {
     font-size: var(--text-xl);
     line-height: var(--tw-leading, var(--text-xl--line-height));
+  }
+  .text-xs {
+    font-size: var(--text-xs);
+    line-height: var(--tw-leading, var(--text-xs--line-height));
   }
   .font-bold {
     --tw-font-weight: var(--font-weight-bold);
@@ -274,8 +288,11 @@
   .text-gray-100 {
     color: var(--color-gray-100);
   }
-  .text-gray-400 {
-    color: var(--color-gray-400);
+  .text-gray-200 {
+    color: var(--color-gray-200);
+  }
+  .text-gray-300 {
+    color: var(--color-gray-300);
   }
   .shadow-md {
     --tw-shadow: 0 4px 6px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 2px 4px -2px var(--tw-shadow-color, rgb(0 0 0 / 0.1));

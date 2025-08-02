@@ -383,35 +383,41 @@ fn Message(message: ReadOnlySignal<MessageState>) -> Element {
     let msg_class = use_memo(move || {
         let user = user();
         let assistant_placeholder = assistant_placeholder();
-        let mut class = format!("w-2/3 p-2 rounded-lg shadow-md overflow-y-hidden overflow-x-scroll text-gray-100 {}", user.background_color());
-        if user == User::Assistant {
-            class.push_str(" self-start");
-        } else {
-            class.push_str(" self-end");
-        }
+        let mut class = format!("max-w-[90%] p-2 rounded-lg shadow-md overflow-y-hidden overflow-x-scroll text-gray-100 {}", user.background_color());
         if assistant_placeholder {
-            class.push_str(" text-gray-400");
+            class.push_str(" text-gray-200");
+        }
+        class
+    });
+
+    let row_class = use_memo(move || {
+        let user = user();
+        let mut class = String::from("flex flex-row space-x-4");
+        if user == User::Assistant {
+            class.push_str(" justify-start");
+        } else {
+            class.push_str(" justify-end");
         }
         class
     });
 
     rsx! {
         div {
-            class: "flex flex-row space-x-4",
+            class: "{row_class}",
             div {
-                class: "{msg_class}",
-                if assistant_placeholder() {
-                    "Thinking..."
-                } else {
+                class: "{msg_class} flex flex-col",
+                div {
+                    class: "flex-grow",
+                    dangerous_inner_html: "{contents}"
+                }
+                if let Some(tokens_per_second) = tokens_per_second() {
                     div {
-                      dangerous_inner_html:  "{contents}"
+                        class: "text-xs text-gray-300 self-end pt-1",
+                        "{tokens_per_second:02.0} tokens/s"
                     }
                 }
-            }
-            if let Some(tokens_per_second) = tokens_per_second() {
-                div {
-                    class: "text-right",
-                    "{tokens_per_second:02.0} tokens/s"
+                if assistant_placeholder() {
+                    "Thinking..."
                 }
             }
         }
