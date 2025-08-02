@@ -244,7 +244,7 @@ fn Home(
             class: "flex flex-col h-screen bg-gray-100",
 
             div {
-                class: "flex-1 p-4 space-y-4 overflow-y-auto",
+                class: "flex-1 p-10 space-y-4 overflow-y-auto",
                 for message in messages.read().iter().cloned() {
                     Message {
                         message,
@@ -395,7 +395,17 @@ fn Message(message: ReadOnlySignal<MessageState>) -> Element {
     let msg_class = use_memo(move || {
         let user = user();
         let assistant_placeholder = assistant_placeholder();
-        let mut class = format!("max-w-[66.66667%] p-4 rounded-xl {} {}", user.background_color(), user.text_color());
+        let mut class = format!(
+            "max-w-[66.66%] p-4 shadow-lg {} {}",
+            user.background_color(),
+            user.text_color()
+        );
+
+        if user == User::Assistant {
+            class.push_str(" rounded-3xl rounded-bl-lg");
+        } else {
+            class.push_str(" rounded-3xl rounded-br-lg");
+        }
         if assistant_placeholder {
             class.push_str(" text-gray-400");
         }
