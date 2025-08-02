@@ -244,22 +244,23 @@ fn Home(
 
     rsx! {
         div {
-            class: "flex flex-col h-screen bg-slate-300",
+            class: "flex flex-col h-screen bg-gray-100",
 
             div {
-                class: "flex flex-col flex-1 p-4 space-y-4 overflow-y-auto",
-
+                class: "flex-1 p-4 space-y-4 overflow-y-auto",
                 for message in messages.read().iter().cloned() {
                     Message {
                         message,
                     }
                 }
+            }
 
+            div {
+                class: "p-4 bg-white border-t border-gray-200",
                 div {
                     class: "flex flex-row space-x-4",
-
                     input {
-                        class: "flex-1 p-2 bg-white rounded-lg shadow-md",
+                        class: "flex-1 p-2 bg-white rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-[#2B2A28]",
                         placeholder: "Type a message...",
                         value: "{current_message}",
                         oninput: move |event| {
@@ -323,8 +324,22 @@ enum User {
 impl User {
     fn background_color(&self) -> &'static str {
         match self {
-            User::Assistant => "bg-red-500",
-            User::User => "bg-blue-500",
+            User::Assistant => "bg-gray-200",
+            User::User => "bg-[#2B2A28]",
+        }
+    }
+
+    fn text_color(&self) -> &'static str {
+        match self {
+            User::Assistant => "text-gray-800",
+            User::User => "text-white",
+        }
+    }
+
+    fn token_color(&self) -> &'static str {
+        match self {
+            User::Assistant => "text-gray-500",
+            User::User => "text-blue-200",
         }
     }
 }
@@ -383,9 +398,9 @@ fn Message(message: ReadOnlySignal<MessageState>) -> Element {
     let msg_class = use_memo(move || {
         let user = user();
         let assistant_placeholder = assistant_placeholder();
-        let mut class = format!("max-w-[90%] p-2 rounded-lg shadow-md overflow-y-hidden overflow-x-scroll text-gray-100 {}", user.background_color());
+        let mut class = format!("max-w-[66.66667%] p-4 rounded-xl {} {}", user.background_color(), user.text_color());
         if assistant_placeholder {
-            class.push_str(" text-gray-200");
+            class.push_str(" text-gray-400");
         }
         class
     });
@@ -412,7 +427,7 @@ fn Message(message: ReadOnlySignal<MessageState>) -> Element {
                 }
                 if let Some(tokens_per_second) = tokens_per_second() {
                     div {
-                        class: "text-xs text-gray-300 self-end pt-1",
+                        class: "text-xs self-end pt-1 {user().token_color()}",
                         "{tokens_per_second:02.0} tokens/s"
                     }
                 }
