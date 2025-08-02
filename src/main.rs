@@ -256,10 +256,24 @@ fn Home(
 
     rsx! {
         div {
-            class: "flex flex-col h-screen bg-gray-100",
+            class: "flex flex-col h-screen bg-gray-100 relative",
+
+            // Minimal reconfigure button in top-right corner
+            div {
+                class: "absolute top-4 right-4 z-10",
+                Link {
+                    to: Route::Setup {},
+                    class: "p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow duration-200 text-gray-600 hover:text-gray-800",
+                    title: "Reconfigure settings",
+                    span { 
+                        class: "text-lg",
+                        "⚙️" 
+                    }
+                }
+            }
 
             div {
-                class: "flex-1 p-10 space-y-4 overflow-y-auto",
+                class: "flex-1 p-10 pt-20 space-y-4 overflow-y-auto",
                 id: "messages-container",
                 for message in messages.read().iter().cloned() {
                     Message {
