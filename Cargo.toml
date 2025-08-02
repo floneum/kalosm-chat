@@ -11,11 +11,9 @@ reqwest = "0.12.12"
 
 # Only include native feature for iOS and macOS
 [target.'cfg(any(target_os = "ios", target_os = "macos"))'.dependencies]
-dioxus = { version = "=0.7.0-alpha.3", features = ["desktop", "router", "native"] }
+#TODO: dioxus = { version = "=0.7.0-alpha.3", features = ["desktop", "router", "native"] } # add native feature later when blitz stablizes
 kalosm = { version = "0.4.0", features = ["language","metal"] }
 
-[features]
- metal = ["kalosm/metal"]
 
 [profile.release]
 lto = true

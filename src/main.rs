@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 
+
 use std::time::Duration;
 
 use comrak::{
@@ -403,7 +404,7 @@ fn Message(message: ReadOnlySignal<MessageState>) -> Element {
                     "Thinking..."
                 } else {
                     div {
-                        "{contents}"
+                      dangerous_inner_html:  "{contents}"
                     }
                 }
             }
