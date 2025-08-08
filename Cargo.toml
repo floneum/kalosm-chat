@@ -9,11 +9,12 @@ comrak = "0.40.0"
 dioxus = { version = "=0.7.0-alpha.3", features = ["desktop", "router"] }
 reqwest = "0.12.12"
 
-# Only include native feature for iOS and macOS
+# Only include metal feature for iOS and macOS
 [target.'cfg(any(target_os = "ios", target_os = "macos"))'.dependencies]
-#TODO: dioxus = { version = "=0.7.0-alpha.3", features = ["desktop", "router", "native"] } # add native feature later when blitz stablizes
 kalosm = { version = "0.4.0", features = ["language","metal"] }
 
+[target.'cfg(not(any(target_os = "ios", target_os = "macos")))'.dependencies]
+kalosm = { version = "0.4.0", features = ["language"] }
 
 [profile.release]
 lto = true

@@ -5,9 +5,9 @@ use comrak::{
     markdown_to_html_with_plugins, plugins::syntect::SyntectAdapterBuilder, ExtensionOptions,
     Plugins, RenderOptions,
 };
+use dioxus::document::eval;
 use dioxus::{html::input_data::keyboard_types::Key, prelude::*, CapturedError};
 use kalosm::language::*;
-use dioxus::document::eval;
 
 fn main() {
     launch(app);
@@ -235,7 +235,7 @@ fn Home(
                     chat = chat.with_system_prompt(assistant_description);
                 }
                 Ok(chat)
-            },
+            }
             Err(e) => Err(CapturedError::from_display(e.to_string())),
         }
     });
@@ -243,14 +243,16 @@ fn Home(
     use_effect(move || {
         let messages_len = messages.read().len();
         if messages_len > 0 {
-            let _ = eval(r#"
+            let _ = eval(
+                r#"
                 setTimeout(() => {
                     const container = document.querySelector('.overflow-y-auto');
                     if (container) {
                         container.scrollTop = container.scrollHeight;
                     }
                 }, 100);
-            "#);
+            "#,
+            );
         }
     });
 
@@ -265,9 +267,9 @@ fn Home(
                     to: Route::Setup {},
                     class: "p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow duration-200 text-gray-600 hover:text-gray-800",
                     title: "Reconfigure settings",
-                    span { 
+                    span {
                         class: "text-lg",
-                        "⚙️" 
+                        "⚙️"
                     }
                 }
             }
@@ -422,49 +424,31 @@ fn Message(message: ReadOnlySignal<MessageState>) -> Element {
         })
     });
 
-    let msg_class = use_memo(move || {
-        let user = user();
-        let assistant_placeholder = assistant_placeholder();
-        let mut class = format!(
-            "max-w-[66.66%] p-4 shadow-lg {} {}",
-            user.background_color(),
-            user.text_color()
-        );
-
-        if user == User::Assistant {
-            class.push_str(" rounded-3xl rounded-bl-lg");
-        } else {
-            class.push_str(" rounded-3xl rounded-br-lg");
-        }
-        if assistant_placeholder {
-            class.push_str(" text-gray-400");
-        }
-        class
-    });
-
-    let row_class = use_memo(move || {
-        let user = user();
-        let mut class = String::from("flex flex-row space-x-4");
-        if user == User::Assistant {
-            class.push_str(" justify-start");
-        } else {
-            class.push_str(" justify-end");
-        }
-        class
-    });
+    let user = user();
 
     rsx! {
         div {
-            class: "{row_class}",
+            class: "flex flex-row space-x-4",
+            class: if user == User::Assistant {
+                "justify-start"
+            } else {
+                "justify-end"
+            },
             div {
-                class: "{msg_class} flex flex-col",
+                class: "max-w-[66.66%] p-4 shadow-lg flex flex-col rounded-3xl rounded-bl-lg",
+                class: "{user.background_color()}",
+                class: "{user.text_color()}",
+                class: if assistant_placeholder() {
+                    "text-gray-400"
+                },
                 div {
                     class: "flex-grow",
                     dangerous_inner_html: "{contents}"
                 }
                 if let Some(tokens_per_second) = tokens_per_second() {
                     div {
-                        class: "text-xs self-end pt-1 {user().token_color()}",
+                        class: "text-xs self-end pt-1",
+                        class: "{user.token_color()}",
                         "{tokens_per_second:02.0} tokens/s"
                     }
                 }
