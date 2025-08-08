@@ -5,13 +5,15 @@ authors = ["Evan Almloff <evanalmloff@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-comrak = "0.33.0"
-dioxus = { version = "0.6", features = ["desktop", "router"] }
-kalosm = { git = "https://github.com/floneum/floneum", features = ["language"], rev = "c10046e" }
+comrak = "0.40.0"
+dioxus = { version = "=0.7.0-alpha.3", features = ["desktop", "router"] }
 reqwest = "0.12.12"
 
-[features]
-metal = ["kalosm/metal"]
+# Only include native feature for iOS and macOS
+[target.'cfg(any(target_os = "ios", target_os = "macos"))'.dependencies]
+#TODO: dioxus = { version = "=0.7.0-alpha.3", features = ["desktop", "router", "native"] } # add native feature later when blitz stablizes
+kalosm = { version = "0.4.0", features = ["language","metal"] }
+
 
 [profile.release]
 lto = true

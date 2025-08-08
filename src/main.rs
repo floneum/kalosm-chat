@@ -1,5 +1,4 @@
 #![allow(non_snake_case)]
-
 use std::time::Duration;
 
 use comrak::{
@@ -8,6 +7,7 @@ use comrak::{
 };
 use dioxus::{html::input_data::keyboard_types::Key, prelude::*, CapturedError};
 use kalosm::language::*;
+use dioxus::document::eval;
 
 fn main() {
     launch(app);
@@ -15,13 +15,8 @@ fn main() {
 
 fn app() -> Element {
     rsx! {
-        document::Link {
-            rel: "stylesheet",
-            href: asset!("public/tailwind.css"),
-        }
-        document::Link {
-            rel: "stylesheet",
-            href: asset!("public/loading.css"),
+        document::Stylesheet {
+            href: asset!("/assets/tailwind.css"),
         }
         ErrorBoundary {
             handle_error: |error| rsx! {
@@ -33,9 +28,9 @@ fn app() -> Element {
             SuspenseBoundary {
                 fallback: |_| rsx! {
                     div {
-                        class: "w-screen h-screen flex flex-col items-center justify-center",
+                        class: "flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-200",
                         div {
-                            class: "spinner",
+                            class: "animate-spin rounded-full h-32 w-32 border-t-4 border-b-4 border-[#2B2A28]"
                         }
                     }
                 },
@@ -94,27 +89,33 @@ fn Setup() -> Element {
 
     rsx! {
         div {
-            class: "flex flex-col h-screen bg-slate-300",
-
+            class: "flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-200",
             div {
-                class: "flex flex-col flex-1 p-4 space-y-4 overflow-y-auto",
+                class: "w-full max-w-md p-6 space-y-2 bg-white rounded-2xl shadow-2xl",
+                div {
+                    class: "text-center",
+                    h1 {
+                        class: "text-2xl font-bold text-gray-800",
+                        "Configure Your Assistant"
+                    }
+                    p {
+                        class: "text-sm text-gray-500",
+                        "Set the model parameters to start"
+                    }
+                }
 
                 div {
-                    class: "flex flex-col space-y-4",
-
+                    class: "space-y-2",
                     div {
-                        class: "flex flex-row space-x-4 justify-between align-center items-center",
                         label {
-                            class: "text-xl font-bold",
-                            "User"
+                            class: "block text-xs font-medium text-gray-600",
+                            "Hugging Face User (Optional)"
                         }
                         input {
-                            class: "p-2 bg-white rounded-lg shadow-md",
-                            placeholder: "Type a user...",
+                            class: "w-full px-1 py-1 text-sm text-gray-800 bg-transparent border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-[#2B2A28] transition-colors",
+                            placeholder: "e.g., bartowski",
                             value: "{user}",
-                            oninput: move |event| {
-                                user.set(event.value())
-                            },
+                            oninput: move |event| user.set(event.value()),
                             onkeydown: move |event| async move {
                                 if event.key() == Key::Enter {
                                     if let Some(mount) = model_input_mount() {
@@ -123,17 +124,18 @@ fn Setup() -> Element {
                                 }
                             },
                         }
+                    }
+
+                    div {
                         label {
-                            class: "text-xl font-bold",
-                            "Model"
+                            class: "block text-xs font-medium text-gray-600",
+                            "Model ID"
                         }
                         input {
-                            class: "p-2 bg-white rounded-lg shadow-md",
-                            placeholder: "Type a model...",
+                            class: "w-full px-1 py-1 text-sm text-gray-800 bg-transparent border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-[#2B2A28] transition-colors",
+                            placeholder: "e.g., Qwen2.5-7B-Instruct-GGUF",
                             value: "{model_id}",
-                            oninput: move |event| {
-                                model_id.set(event.value())
-                            },
+                            oninput: move |event| model_id.set(event.value()),
                             onkeydown: move |event| async move {
                                 if event.key() == Key::Enter {
                                     if let Some(mount) = file_input_mount() {
@@ -141,21 +143,20 @@ fn Setup() -> Element {
                                     }
                                 }
                             },
-                            onmounted: move |mount| {
-                                model_input_mount.set(Some(mount.data));
-                            },
+                            onmounted: move |mount| model_input_mount.set(Some(mount.data)),
                         }
+                    }
+
+                    div {
                         label {
-                            class: "text-xl font-bold",
-                            "File"
+                            class: "block text-xs font-medium text-gray-600",
+                            "Model File"
                         }
                         input {
-                            class: "p-2 bg-white rounded-lg shadow-md",
-                            placeholder: "Type a file...",
+                            class: "w-full px-1 py-1 text-sm text-gray-800 bg-transparent border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-[#2B2A28] transition-colors",
+                            placeholder: "e.g., Qwen2.5-7B-Instruct-Q4_K_M.gguf",
                             value: "{file}",
-                            oninput: move |event| {
-                                file.set(event.value())
-                            },
+                            oninput: move |event| file.set(event.value()),
                             onkeydown: move |event| async move {
                                 if event.key() == Key::Enter {
                                     if let Some(mount) = description_input_mount() {
@@ -163,41 +164,39 @@ fn Setup() -> Element {
                                     }
                                 }
                             },
-                            onmounted: move |mount| {
-                                file_input_mount.set(Some(mount.data));
-                            },
+                            onmounted: move |mount| file_input_mount.set(Some(mount.data)),
                         }
                     }
 
-                    label {
-                        class: "text-xl font-bold",
-                        "Assistant Description"
-                    }
-
-                    input {
-                        class: "p-2 bg-white rounded-lg shadow-md",
-                        placeholder: "Type a description...",
-                        value: "{assistant_description}",
-                        oninput: move |event| {
-                            assistant_description.set(event.value())
-                        },
-                        onkeydown: move |event| {
-                            if event.key() == Key::Enter {
-                                start_chat();
-                            }
-                        },
-                        onmounted: move |mount| {
-                            description_input_mount.set(Some(mount.data));
-                        },
+                    div {
+                        label {
+                            class: "block text-xs font-medium text-gray-600",
+                            "Assistant Persona"
+                        }
+                        textarea {
+                            class: "w-full px-1 py-1 text-sm text-gray-800 bg-transparent border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-[#2B2A28] transition-colors resize-none",
+                            placeholder: "Describe your assistant's personality...",
+                            rows: 2,
+                            value: "{assistant_description}",
+                            oninput: move |event| assistant_description.set(event.value()),
+                            onkeydown: move |event| {
+                                if event.key() == Key::Enter && !event.modifiers().shift() {
+                                    start_chat();
+                                }
+                            },
+                            onmounted: move |mount| description_input_mount.set(Some(mount.data)),
+                        }
                     }
 
                     button {
-                        class: "p-2 bg-white rounded-lg shadow-md",
-                        onclick: move |_| {
-                            start_chat()
-                        },
-                        disabled,
-                        "Start Chatting"
+                        class: "w-full px-4 py-2 mt-4 font-bold text-white bg-[#2B2A28] rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2B2A28] transition-all duration-300 transform hover:shadow-lg hover:-translate-y-1 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none",
+                        onclick: move |_| start_chat(),
+                        disabled: disabled(),
+                        if disabled() {
+                            "Verifying Model..."
+                        } else {
+                            "Start Chatting"
+                        }
                     }
                 }
             }
@@ -241,24 +240,54 @@ fn Home(
         }
     });
 
+    use_effect(move || {
+        let messages_len = messages.read().len();
+        if messages_len > 0 {
+            let _ = eval(r#"
+                setTimeout(() => {
+                    const container = document.querySelector('.overflow-y-auto');
+                    if (container) {
+                        container.scrollTop = container.scrollHeight;
+                    }
+                }, 100);
+            "#);
+        }
+    });
+
     rsx! {
         div {
-            class: "flex flex-col h-screen bg-slate-300",
+            class: "flex flex-col h-screen bg-gray-100 relative",
+
+            // Minimal reconfigure button in top-right corner
+            div {
+                class: "absolute top-4 right-4 z-10",
+                Link {
+                    to: Route::Setup {},
+                    class: "p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow duration-200 text-gray-600 hover:text-gray-800",
+                    title: "Reconfigure settings",
+                    span { 
+                        class: "text-lg",
+                        "⚙️" 
+                    }
+                }
+            }
 
             div {
-                class: "flex flex-col flex-1 p-4 space-y-4 overflow-y-auto",
-
+                class: "flex-1 p-10 pt-20 space-y-4 overflow-y-auto",
+                id: "messages-container",
                 for message in messages.read().iter().cloned() {
                     Message {
                         message,
                     }
                 }
+            }
 
+            div {
+                class: "p-4 bg-white border-t border-gray-200",
                 div {
                     class: "flex flex-row space-x-4",
-
                     input {
-                        class: "flex-1 p-2 bg-white rounded-lg shadow-md",
+                        class: "flex-1 p-2 bg-white rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-[#2B2A28]",
                         placeholder: "Type a message...",
                         value: "{current_message}",
                         oninput: move |event| {
@@ -322,8 +351,22 @@ enum User {
 impl User {
     fn background_color(&self) -> &'static str {
         match self {
-            User::Assistant => "bg-red-500",
-            User::User => "bg-blue-500",
+            User::Assistant => "bg-gray-200",
+            User::User => "bg-[#2B2A28]",
+        }
+    }
+
+    fn text_color(&self) -> &'static str {
+        match self {
+            User::Assistant => "text-gray-800",
+            User::User => "text-white",
+        }
+    }
+
+    fn token_color(&self) -> &'static str {
+        match self {
+            User::Assistant => "text-gray-500",
+            User::User => "text-gray-400",
         }
     }
 }
@@ -379,32 +422,54 @@ fn Message(message: ReadOnlySignal<MessageState>) -> Element {
         })
     });
 
+    let msg_class = use_memo(move || {
+        let user = user();
+        let assistant_placeholder = assistant_placeholder();
+        let mut class = format!(
+            "max-w-[66.66%] p-4 shadow-lg {} {}",
+            user.background_color(),
+            user.text_color()
+        );
+
+        if user == User::Assistant {
+            class.push_str(" rounded-3xl rounded-bl-lg");
+        } else {
+            class.push_str(" rounded-3xl rounded-br-lg");
+        }
+        if assistant_placeholder {
+            class.push_str(" text-gray-400");
+        }
+        class
+    });
+
+    let row_class = use_memo(move || {
+        let user = user();
+        let mut class = String::from("flex flex-row space-x-4");
+        if user == User::Assistant {
+            class.push_str(" justify-start");
+        } else {
+            class.push_str(" justify-end");
+        }
+        class
+    });
+
     rsx! {
         div {
-            class: "flex flex-row space-x-4",
+            class: "{row_class}",
             div {
-                class: "w-2/3 p-2 bg-white rounded-lg shadow-md overflow-y-hidden overflow-x-scroll",
-                class: if user() == User::Assistant {
-                    "self-start"
-                } else {
-                    "self-end"
-                },
-                class: if assistant_placeholder() {
-                    "text-gray-400"
-                },
-                background_color: user().background_color(),
-                if assistant_placeholder() {
-                    "Thinking..."
-                } else {
+                class: "{msg_class} flex flex-col",
+                div {
+                    class: "flex-grow",
+                    dangerous_inner_html: "{contents}"
+                }
+                if let Some(tokens_per_second) = tokens_per_second() {
                     div {
-                        dangerous_inner_html: contents
+                        class: "text-xs self-end pt-1 {user().token_color()}",
+                        "{tokens_per_second:02.0} tokens/s"
                     }
                 }
-            }
-            if let Some(tokens_per_second) = tokens_per_second() {
-                div {
-                    class: "text-right",
-                    "{tokens_per_second:02.0} tokens/s"
+                if assistant_placeholder() {
+                    "Thinking..."
                 }
             }
         }
