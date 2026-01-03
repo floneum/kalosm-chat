@@ -10,7 +10,7 @@ use comrak::{
     markdown_to_html_with_plugins, plugins::syntect::SyntectAdapterBuilder, ExtensionOptions,
     Plugins, RenderOptions,
 };
-use components::avatar::{Avatar, AvatarFallback, AvatarImageSize};
+use components::avatar::{Avatar, AvatarFallback, AvatarImage, AvatarImageSize};
 use components::button::{Button, ButtonVariant};
 use components::card::{Card, CardContent, CardDescription, CardHeader, CardTitle};
 use components::input::Input;
@@ -379,7 +379,7 @@ fn Home(
             // Input area
             Card {
                 CardContent {
-                    style: "padding: 1rem;",
+                    style: "padding: 0rem 1rem;",
                     div {
                         style: "display: flex; flex-direction: row; gap: 0.75rem;",
                         Input {
@@ -510,9 +510,9 @@ fn Message(message: ReadSignal<MessageState>) -> Element {
     let is_assistant = user == ChatUser::Assistant;
 
     let row_style = if is_assistant {
-        "display: flex; gap: 0.75rem; flex-direction: row; margin-bottom: 1rem;"
+        "display: flex; gap: 0.75rem; flex-direction: row; margin-bottom: 0.5rem;"
     } else {
-        "display: flex; gap: 0.75rem; flex-direction: row-reverse; margin-bottom: 1rem;"
+        "display: flex; gap: 0.75rem; flex-direction: row-reverse; margin-bottom: 0.5rem;"
     };
 
     let token_style = if is_assistant {
@@ -529,6 +529,12 @@ fn Message(message: ReadSignal<MessageState>) -> Element {
             Avatar {
                 size: AvatarImageSize::Small,
                 style: "flex-shrink: 0;",
+                if !is_assistant {
+                    AvatarImage {
+                        src: "https://avatars.githubusercontent.com/u/66571940?s=96&v=4",
+                        alt: "User avatar",
+                    }
+                }
                 AvatarFallback {
                     {user.avatar_fallback()}
                 }
@@ -538,7 +544,7 @@ fn Message(message: ReadSignal<MessageState>) -> Element {
             div {
                 style: "max-width: 70%; display: flex; flex-direction: column;",
                 div {
-                    style: "padding: 0.75rem 1rem; border-radius: 1rem; {user.bubble_style()}",
+                    style: "padding: 0.5rem; border-radius: 1rem; {user.bubble_style()}",
                     if assistant_placeholder() {
                         div {
                             style: "display: flex; align-items: center; gap: 0.5rem; color: var(--secondary-color-6);",
