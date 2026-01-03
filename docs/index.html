@@ -1,19 +1,10 @@
 <!DOCTYPE html>
 <head>
-  
-<script type="module">
-import init, * as bindings from '/kalosm-chat/kalosm-chat-e9ad8ece60052aa3.js';
-const wasm = await init({ module_or_path: '/kalosm-chat/kalosm-chat-e9ad8ece60052aa3_bg.wasm' });
-
-
-window.wasmBindings = bindings;
-
-
-dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
-
-</script>
-  <link rel="stylesheet" href="/kalosm-chat/tailwind-1beb50372c35cd05.css" integrity="sha384-a10d0NeCSEF7FzT87JsxFOfbNyR7l8icQ8jgwS6Z8IAV0ZIS7aM+gcjMqQSHeaH9"/>
-</head>
+  <link data-trunk rel="rust"  data-wasm-opt=0 />
+  <link data-trunk rel="css" href="/assets/tailwind.css" />
+<link rel="stylesheet" href="tailwind.css">
+<link rel="preload" as="script" href="/kalosm-chat/assets/kalosm-chat-dxh79b94b8e9356e54.js" crossorigin></head>
 <body>
   <div id="main"></div>
-</body>
+<script type="module" async src="/kalosm-chat/assets/kalosm-chat-dxh79b94b8e9356e54.js"></script>
+            </body>
