@@ -12,6 +12,7 @@ kalosm-llama = { git = "https://github.com/floneum/floneum" }
 getrandom = { version = "0.3", features = ["wasm_js"] }
 wasm-timer = "0.2.5"
 tracing = "0.1.44"
+dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version = "0.0.1", default-features = false }
 
 [features]
 web = ["dioxus/web"]

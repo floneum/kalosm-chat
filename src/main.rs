@@ -1,5 +1,8 @@
 #![recursion_limit = "256"]
 #![allow(non_snake_case)]
+
+mod components;
+
 use std::time::Duration;
 use wasm_timer::Instant;
 
@@ -7,6 +10,14 @@ use comrak::{
     markdown_to_html_with_plugins, plugins::syntect::SyntectAdapterBuilder, ExtensionOptions,
     Plugins, RenderOptions,
 };
+use components::avatar::{Avatar, AvatarFallback, AvatarImageSize};
+use components::button::{Button, ButtonVariant};
+use components::card::{Card, CardContent, CardDescription, CardHeader, CardTitle};
+use components::input::Input;
+use components::label::Label;
+use components::progress::{Progress, ProgressIndicator};
+use components::scroll_area::ScrollArea;
+use components::textarea::Textarea;
 use dioxus::document::eval;
 use dioxus::{html::input_data::keyboard_types::Key, prelude::*, CapturedError};
 use kalosm_llama::prelude::*;
@@ -22,26 +33,31 @@ fn app() -> Element {
     let current_loading_progress = loading_progress.loading_progress.cloned() * 100.0;
     rsx! {
         document::Stylesheet {
-            href: asset!("/assets/tailwind.css"),
-        }
-        document::Stylesheet {
-            href: "/assets/tailwind.css",
+            href: asset!("/assets/dx-components-theme.css"),
         }
         ErrorBoundary {
             handle_error: |error| rsx! {
                 div {
-                    class: "flex flex-col h-screen bg-slate-300",
+                    style: "display: flex; flex-direction: column; height: 100vh; background: var(--primary-error-color);",
                     "{error:#?}"
                 }
             },
             SuspenseBoundary {
                 fallback: move |_| rsx! {
                     div {
-                        class: "flex flex-col items-center justify-center min-h-screen bg-linear-to-br from-gray-50 to-gray-200",
+                        style: "display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: var(--primary-color); gap: 1.5rem;",
                         div {
-                            class: "animate-spin rounded-full h-32 w-32 border-t-4 border-b-4 border-[#2B2A28]",
+                            style: "width: 16rem;",
+                            Progress {
+                                value: current_loading_progress as f64,
+                                max: 100.0,
+                                ProgressIndicator {}
+                            }
                         }
-                        "Loading {current_loading_progress:.0}%"
+                        p {
+                            style: "color: var(--secondary-color-5); font-weight: 500;",
+                            "Loading model... {current_loading_progress:.0}%"
+                        }
                     }
                 },
                 Router::<Route> {}
@@ -93,119 +109,94 @@ fn Setup() -> Element {
         });
     };
 
-    let mut model_input_mount: Signal<Option<std::rc::Rc<MountedData>>> = use_signal(|| None);
-    let mut file_input_mount: Signal<Option<std::rc::Rc<MountedData>>> = use_signal(|| None);
-    let mut description_input_mount: Signal<Option<std::rc::Rc<MountedData>>> = use_signal(|| None);
-
     rsx! {
         div {
-            class: "flex items-center justify-center min-h-screen bg-linear-to-br from-gray-50 to-gray-200",
-            div {
-                class: "w-full max-w-md p-6 space-y-2 bg-white rounded-2xl shadow-2xl",
-                div {
-                    class: "text-center",
-                    h1 {
-                        class: "text-2xl font-bold text-gray-800",
+            style: "display: flex; align-items: center; justify-content: center; min-height: 100vh;",
+            Card {
+                style: "width: 100%; max-width: 28rem;",
+                CardHeader {
+                    style: "text-align: center;",
+                    CardTitle {
                         "Configure Your Assistant"
                     }
-                    p {
-                        class: "text-sm text-gray-500",
+                    CardDescription {
                         "Set the model parameters to start"
                     }
                 }
-
-                div {
-                    class: "space-y-2",
+                CardContent {
                     div {
-                        label {
-                            class: "block text-xs font-medium text-gray-600",
-                            "Hugging Face User (Optional)"
+                        style: "display: flex; flex-direction: column; gap: 1rem;",
+                        div {
+                            style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                            Label {
+                                html_for: "hf-user",
+                                "Hugging Face User (Optional)"
+                            }
+                            Input {
+                                id: "hf-user",
+                                placeholder: "e.g., bartowski",
+                                value: "{user}",
+                                oninput: move |event: FormEvent| user.set(event.value()),
+                            }
                         }
-                        input {
-                            class: "w-full px-1 py-1 text-sm text-gray-800 bg-transparent border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-[#2B2A28] transition-colors",
-                            placeholder: "e.g., bartowski",
-                            value: "{user}",
-                            oninput: move |event| user.set(event.value()),
-                            onkeydown: move |event| async move {
-                                if event.key() == Key::Enter {
-                                    if let Some(mount) = model_input_mount() {
-                                        _ = mount.set_focus(true).await;
+
+                        div {
+                            style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                            Label {
+                                html_for: "model-id",
+                                "Model ID"
+                            }
+                            Input {
+                                id: "model-id",
+                                placeholder: "e.g., Qwen2.5-7B-Instruct-GGUF",
+                                value: "{model_id}",
+                                oninput: move |event: FormEvent| model_id.set(event.value()),
+                            }
+                        }
+
+                        div {
+                            style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                            Label {
+                                html_for: "model-file",
+                                "Model File"
+                            }
+                            Input {
+                                id: "model-file",
+                                placeholder: "e.g., Qwen2.5-7B-Instruct-Q4_K_M.gguf",
+                                value: "{file}",
+                                oninput: move |event: FormEvent| file.set(event.value()),
+                            }
+                        }
+
+                        div {
+                            style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                            Label {
+                                html_for: "persona",
+                                "Assistant Persona"
+                            }
+                            Textarea {
+                                id: "persona",
+                                placeholder: "Describe your assistant's personality...",
+                                rows: 3,
+                                value: "{assistant_description}",
+                                oninput: move |event: FormEvent| assistant_description.set(event.value()),
+                                onkeydown: move |event: KeyboardEvent| {
+                                    if event.key() == Key::Enter && !event.modifiers().shift() {
+                                        start_chat();
                                     }
-                                }
-                            },
+                                },
+                            }
                         }
-                    }
 
-                    div {
-                        label {
-                            class: "block text-xs font-medium text-gray-600",
-                            "Model ID"
-                        }
-                        input {
-                            class: "w-full px-1 py-1 text-sm text-gray-800 bg-transparent border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-[#2B2A28] transition-colors",
-                            placeholder: "e.g., Qwen2.5-7B-Instruct-GGUF",
-                            value: "{model_id}",
-                            oninput: move |event| model_id.set(event.value()),
-                            onkeydown: move |event| async move {
-                                if event.key() == Key::Enter {
-                                    if let Some(mount) = file_input_mount() {
-                                        _ = mount.set_focus(true).await;
-                                    }
-                                }
-                            },
-                            onmounted: move |mount| model_input_mount.set(Some(mount.data)),
-                        }
-                    }
-
-                    div {
-                        label {
-                            class: "block text-xs font-medium text-gray-600",
-                            "Model File"
-                        }
-                        input {
-                            class: "w-full px-1 py-1 text-sm text-gray-800 bg-transparent border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-[#2B2A28] transition-colors",
-                            placeholder: "e.g., Qwen2.5-7B-Instruct-Q4_K_M.gguf",
-                            value: "{file}",
-                            oninput: move |event| file.set(event.value()),
-                            onkeydown: move |event| async move {
-                                if event.key() == Key::Enter {
-                                    if let Some(mount) = description_input_mount() {
-                                        _ = mount.set_focus(true).await;
-                                    }
-                                }
-                            },
-                            onmounted: move |mount| file_input_mount.set(Some(mount.data)),
-                        }
-                    }
-
-                    div {
-                        label {
-                            class: "block text-xs font-medium text-gray-600",
-                            "Assistant Persona"
-                        }
-                        textarea {
-                            class: "w-full px-1 py-1 text-sm text-gray-800 bg-transparent border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-[#2B2A28] transition-colors resize-none",
-                            placeholder: "Describe your assistant's personality...",
-                            rows: 2,
-                            value: "{assistant_description}",
-                            oninput: move |event| assistant_description.set(event.value()),
-                            onkeydown: move |event| {
-                                if event.key() == Key::Enter && !event.modifiers().shift() {
-                                    start_chat();
-                                }
-                            },
-                            onmounted: move |mount| description_input_mount.set(Some(mount.data)),
-                        }
-                    }
-
-                    button {
-                        class: "w-full px-4 py-2 mt-4 font-bold text-white bg-[#2B2A28] rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2B2A28] transition-all duration-300 transform hover:shadow-lg hover:-translate-y-1 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none",
-                        onclick: move |_| start_chat(),
-                        disabled: disabled(),
-                        if disabled() {
-                            "Verifying Model..."
-                        } else {
-                            "Start Chatting"
+                        Button {
+                            style: "width: 100%; margin-top: 1rem;",
+                            onclick: move |_| start_chat(),
+                            disabled: disabled(),
+                            if disabled() {
+                                "Verifying Model..."
+                            } else {
+                                "Start Chatting"
+                            }
                         }
                     }
                 }
@@ -264,7 +255,7 @@ fn Home(
             let _ = eval(
                 r#"
                 setTimeout(() => {
-                    const container = document.querySelector('.overflow-y-auto');
+                    const container = document.querySelector('[data-radix-scroll-area-viewport]');
                     if (container) {
                         container.scrollTop = container.scrollHeight;
                     }
@@ -274,94 +265,160 @@ fn Home(
         }
     });
 
+    let mut send_message = move || {
+        if assistant_responding() {
+            return;
+        }
+        let current_msg = current_message.take();
+        if current_msg.is_empty() {
+            return;
+        }
+        let final_message = current_msg.clone();
+        {
+            let mut messages_mut = messages.write();
+            messages_mut.push(MessageState {
+                user: ChatUser::User,
+                text: current_msg,
+                response_time: None,
+                tokens: 0,
+            });
+            assistant_responding.set(true);
+            let assistant_response = MessageState {
+                user: ChatUser::Assistant,
+                text: String::new(),
+                response_time: None,
+                tokens: 0,
+            };
+            messages_mut.push(assistant_response);
+        }
+        spawn(async move {
+            match &mut *chat.write() {
+                Ok(chat) => {
+                    let mut stream = chat.add_message(final_message);
+                    let start = Instant::now();
+                    while let Some(new_text) = stream.next().await {
+                        let mut messages = messages.write();
+                        let Some(last_message) = messages.last_mut() else {
+                            break;
+                        };
+                        last_message.text += &new_text;
+                        last_message.tokens += 1;
+                    }
+                    let response_time = start.elapsed();
+                    let mut messages = messages.write();
+                    let Some(last_message) = messages.last_mut() else {
+                        return;
+                    };
+                    last_message.response_time = Some(response_time);
+                }
+                Err(err) => {
+                    let mut messages = messages.write();
+                    let Some(last_message) = messages.last_mut() else {
+                        return;
+                    };
+                    last_message.text = format!("Error: {}", err);
+                }
+            }
+            assistant_responding.set(false);
+        });
+    };
+
     rsx! {
         div {
-            class: "flex flex-col h-screen bg-gray-100 relative",
+            style: "display: flex; flex-direction: column; height: 100vh; background: var(--primary-color-1);",
 
-            // Minimal reconfigure button in top-right corner
+            // Header with settings button
             div {
-                class: "absolute top-4 right-4 z-10",
+                style: "display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; background: var(--primary-color); border-bottom: 1px solid var(--primary-color-6);",
+                h1 {
+                    style: "font-size: 1.125rem; font-weight: 600; color: var(--secondary-color-4);",
+                    "Chat"
+                }
                 Link {
                     to: Route::Setup {},
-                    class: "p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow duration-200 text-gray-600 hover:text-gray-800",
-                    title: "Reconfigure settings",
-                    span {
-                        class: "text-lg",
-                        "⚙️"
+                    Button {
+                        variant: ButtonVariant::Ghost,
+                        style: "padding: 0.5rem;",
+                        svg {
+                            xmlns: "http://www.w3.org/2000/svg",
+                            width: "20",
+                            height: "20",
+                            view_box: "0 0 24 24",
+                            fill: "none",
+                            stroke: "currentColor",
+                            stroke_width: "2",
+                            stroke_linecap: "round",
+                            stroke_linejoin: "round",
+                            path {
+                                d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+                            }
+                            circle {
+                                cx: "12",
+                                cy: "12",
+                                r: "3"
+                            }
+                        }
                     }
                 }
             }
 
-            div {
-                class: "flex-1 p-10 pt-20 space-y-4 overflow-y-auto",
-                id: "messages-container",
-                for message in messages.read().iter().cloned() {
-                    Message {
-                        message,
-                    }
-                }
-            }
-
-            div {
-                class: "p-4 bg-white border-t border-gray-200",
+            // Messages area with ScrollArea
+            ScrollArea {
+                style: "flex: 1;",
                 div {
-                    class: "flex flex-row space-x-4",
-                    input {
-                        class: "flex-1 p-2 bg-white rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-[#2B2A28]",
-                        placeholder: "Type a message...",
-                        value: "{current_message}",
-                        oninput: move |event| {
-                            if !assistant_responding() {
-                                current_message.set(event.value())
-                            }
-                        },
-                        onkeydown: move |event| {
-                            if !assistant_responding() && event.key() == Key::Enter {
-                                let current_message = current_message.take();
-                                let final_message = current_message.clone();
-                                {
-                                    let mut messages_mut = messages.write();
-                                    messages_mut.push(MessageState {
-                                        user: User::User,
-                                        text: current_message,
-                                        response_time: None,
-                                        tokens: 0,
-                                    });
-                                    assistant_responding.set(true);
-                                    let assistant_response = MessageState {
-                                        user: User::Assistant,
-                                        text: String::new(),
-                                        response_time: None,
-                                        tokens: 0,
-                                    };
-                                    messages_mut.push(assistant_response);
+                    style: "padding: 1.5rem;",
+                    id: "messages-container",
+                    for message in messages.read().iter().cloned() {
+                        Message {
+                            message,
+                        }
+                    }
+                }
+            }
+
+            // Input area
+            Card {
+                CardContent {
+                    style: "padding: 1rem;",
+                    div {
+                        style: "display: flex; flex-direction: row; gap: 0.75rem;",
+                        Input {
+                            style: "flex: 1;",
+                            placeholder: "Type a message...",
+                            value: "{current_message}",
+                            disabled: assistant_responding(),
+                            oninput: move |event: FormEvent| {
+                                if !assistant_responding() {
+                                    current_message.set(event.value())
                                 }
-                                spawn(async move {
-                                    match &mut *chat.write() {
-                                        Ok(chat) => {
-                                            let mut stream = chat.add_message(final_message);
-                                            let start = Instant::now();
-                                            while let Some(new_text) = stream.next().await {
-                                                let mut messages = messages.write();
-                                                let Some(last_message) = messages.last_mut() else { break };
-                                                last_message.text += &new_text;
-                                                last_message.tokens += 1;
-                                            }
-                                            let response_time = start.elapsed();
-                                            let mut messages = messages.write();
-                                            let Some(last_message) = messages.last_mut() else { return };
-                                            last_message.response_time = Some(response_time);
-                                        }
-                                        Err(err) => {
-                                            let mut messages = messages.write();
-                                            let Some(last_message) = messages.last_mut() else { return };
-                                            last_message.text = format!("Error: {}", err);
-                                        }
-                                    }
-                                    assistant_responding.set(false);
-                                });
+                            },
+                            onkeydown: move |event: KeyboardEvent| {
+                                if event.key() == Key::Enter {
+                                    send_message();
+                                }
+                            },
+                        }
+                        Button {
+                            onclick: move |_| send_message(),
+                            disabled: assistant_responding(),
+                            svg {
+                                xmlns: "http://www.w3.org/2000/svg",
+                                width: "20",
+                                height: "20",
+                                view_box: "0 0 24 24",
+                                fill: "none",
+                                stroke: "currentColor",
+                                stroke_width: "2",
+                                stroke_linecap: "round",
+                                stroke_linejoin: "round",
+                                path {
+                                    d: "M22 2 11 13"
+                                }
+                                path {
+                                    d: "M22 2 15 22 11 13 2 9Z"
+                                }
                             }
-                        },
+                        }
                     }
                 }
             }
@@ -370,37 +427,37 @@ fn Home(
 }
 
 #[derive(PartialEq, Clone, Copy)]
-enum User {
+enum ChatUser {
     Assistant,
     User,
 }
 
-impl User {
-    fn background_color(&self) -> &'static str {
+impl ChatUser {
+    fn bubble_style(&self) -> &'static str {
         match self {
-            User::Assistant => "bg-gray-200",
-            User::User => "bg-[#2B2A28]",
+            ChatUser::Assistant => "background: var(--primary-color-3); color: var(--secondary-color-4);",
+            ChatUser::User => "background: var(--focused-border-color); color: var(--primary-color);",
         }
     }
 
-    fn text_color(&self) -> &'static str {
+    fn avatar_fallback(&self) -> &'static str {
         match self {
-            User::Assistant => "text-gray-800",
-            User::User => "text-white",
+            ChatUser::Assistant => "AI",
+            ChatUser::User => "U",
         }
     }
 
-    fn token_color(&self) -> &'static str {
+    fn token_style(&self) -> &'static str {
         match self {
-            User::Assistant => "text-gray-500",
-            User::User => "text-gray-400",
+            ChatUser::Assistant => "color: var(--secondary-color-5);",
+            ChatUser::User => "color: var(--secondary-color-5);",
         }
     }
 }
 
 #[derive(PartialEq, Clone)]
 struct MessageState {
-    user: User,
+    user: ChatUser,
     text: String,
     response_time: Option<Duration>,
     tokens: usize,
@@ -410,7 +467,7 @@ struct MessageState {
 fn Message(message: ReadSignal<MessageState>) -> Element {
     let assistant_placeholder = use_memo(move || {
         let message = message.read();
-        message.user == User::Assistant && message.text.is_empty()
+        message.user == ChatUser::Assistant && message.text.is_empty()
     });
     let user = use_memo(move || message.read().user);
     let contents = use_memo(move || {
@@ -450,35 +507,57 @@ fn Message(message: ReadSignal<MessageState>) -> Element {
     });
 
     let user = user();
+    let is_assistant = user == ChatUser::Assistant;
+
+    let row_style = if is_assistant {
+        "display: flex; gap: 0.75rem; flex-direction: row; margin-bottom: 1rem;"
+    } else {
+        "display: flex; gap: 0.75rem; flex-direction: row-reverse; margin-bottom: 1rem;"
+    };
+
+    let token_style = if is_assistant {
+        format!("{} text-align: left;", user.token_style())
+    } else {
+        format!("{} text-align: right;", user.token_style())
+    };
 
     rsx! {
         div {
-            class: "flex flex-row space-x-4",
-            class: if user == User::Assistant {
-                "justify-start"
-            } else {
-                "justify-end"
-            },
+            style: "{row_style}",
+
+            // Avatar
+            Avatar {
+                size: AvatarImageSize::Small,
+                style: "flex-shrink: 0;",
+                AvatarFallback {
+                    {user.avatar_fallback()}
+                }
+            }
+
+            // Message bubble
             div {
-                class: "max-w-[66.66%] p-4 shadow-lg flex flex-col rounded-3xl rounded-bl-lg",
-                class: "{user.background_color()}",
-                class: "{user.text_color()}",
-                class: if assistant_placeholder() {
-                    "text-gray-400"
-                },
+                style: "max-width: 70%; display: flex; flex-direction: column;",
                 div {
-                    class: "grow",
-                    dangerous_inner_html: "{contents}"
+                    style: "padding: 0.75rem 1rem; border-radius: 1rem; {user.bubble_style()}",
+                    if assistant_placeholder() {
+                        div {
+                            style: "display: flex; align-items: center; gap: 0.5rem; color: var(--secondary-color-6);",
+                            div {
+                                style: "width: 0.5rem; height: 0.5rem; background: currentColor; border-radius: 50%; animation: pulse 2s infinite;",
+                            }
+                            "Thinking..."
+                        }
+                    } else {
+                        div {
+                            dangerous_inner_html: "{contents}"
+                        }
+                    }
                 }
                 if let Some(tokens_per_second) = tokens_per_second() {
                     div {
-                        class: "text-xs self-end pt-1",
-                        class: "{user.token_color()}",
-                        "{tokens_per_second:02.0} tokens/s"
+                        style: "font-size: 0.75rem; margin-top: 0.25rem; padding: 0 0.25rem; {token_style}",
+                        "{tokens_per_second:.1} tokens/s"
                     }
-                }
-                if assistant_placeholder() {
-                    "Thinking..."
                 }
             }
         }
