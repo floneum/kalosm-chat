@@ -8,7 +8,7 @@ edition = "2021"
 comrak = "0.40.0"
 dioxus = { version = "0.7", features = ["router"] }
 reqwest = "0.12.12"
-kalosm-llama = { path = "/Users/evanalmloff/Desktop/Github/floneum/models/kalosm-llama" }
+kalosm-llama = { git = "https://github.com/floneum/floneum" }
 getrandom = { version = "0.3", features = ["wasm_js"] }
 wasm-timer = "0.2.5"
 tracing = "0.1.44"
