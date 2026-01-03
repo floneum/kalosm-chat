@@ -6,15 +6,16 @@ edition = "2021"
 
 [dependencies]
 comrak = "0.40.0"
-dioxus = { version = "=0.7.0-alpha.3", features = ["desktop", "router"] }
+dioxus = { version = "0.7", features = ["router"] }
 reqwest = "0.12.12"
+kalosm-llama = { path = "/Users/evanalmloff/Desktop/Github/floneum/models/kalosm-llama" }
+getrandom = { version = "0.3", features = ["wasm_js"] }
+wasm-timer = "0.2.5"
+tracing = "0.1.44"
 
-# Only include metal feature for iOS and macOS
-[target.'cfg(any(target_os = "ios", target_os = "macos"))'.dependencies]
-kalosm = { version = "0.4.0", features = ["language","metal"] }
-
-[target.'cfg(not(any(target_os = "ios", target_os = "macos")))'.dependencies]
-kalosm = { version = "0.4.0", features = ["language"] }
+[features]
+web = ["dioxus/web"]
+desktop = ["kalosm-llama/tokio", "dioxus/desktop"]
 
 [profile.release]
 lto = true

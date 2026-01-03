@@ -1,5 +1,7 @@
+#![recursion_limit = "256"]
 #![allow(non_snake_case)]
 use std::time::Duration;
+use wasm_timer::Instant;
 
 use comrak::{
     markdown_to_html_with_plugins, plugins::syntect::SyntectAdapterBuilder, ExtensionOptions,
@@ -7,16 +9,23 @@ use comrak::{
 };
 use dioxus::document::eval;
 use dioxus::{html::input_data::keyboard_types::Key, prelude::*, CapturedError};
-use kalosm::language::*;
+use kalosm_llama::prelude::*;
 
 fn main() {
     launch(app);
 }
 
 fn app() -> Element {
+    let loading_progress = use_context_provider(|| LoadingProgress {
+        loading_progress: Signal::new_maybe_sync(0.0),
+    });
+    let current_loading_progress = loading_progress.loading_progress.cloned() * 100.0;
     rsx! {
         document::Stylesheet {
             href: asset!("/assets/tailwind.css"),
+        }
+        document::Stylesheet {
+            href: "/assets/tailwind.css",
         }
         ErrorBoundary {
             handle_error: |error| rsx! {
@@ -26,12 +35,13 @@ fn app() -> Element {
                 }
             },
             SuspenseBoundary {
-                fallback: |_| rsx! {
+                fallback: move |_| rsx! {
                     div {
-                        class: "flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-200",
+                        class: "flex flex-col items-center justify-center min-h-screen bg-linear-to-br from-gray-50 to-gray-200",
                         div {
-                            class: "animate-spin rounded-full h-32 w-32 border-t-4 border-b-4 border-[#2B2A28]"
+                            class: "animate-spin rounded-full h-32 w-32 border-t-4 border-b-4 border-[#2B2A28]",
                         }
+                        "Loading {current_loading_progress:.0}%"
                     }
                 },
                 Router::<Route> {}
@@ -56,9 +66,9 @@ enum Route {
 #[component]
 fn Setup() -> Element {
     let navigator = use_navigator();
-    let mut user = use_signal(|| "bartowski".to_string());
-    let mut model_id = use_signal(|| "Qwen2.5-7B-Instruct-GGUF".to_string());
-    let mut file = use_signal(|| "Qwen2.5-7B-Instruct-Q4_K_M.gguf".to_string());
+    let mut user = use_signal(|| "Qwen".to_string());
+    let mut model_id = use_signal(|| "Qwen2.5-0.5B-Instruct-GGUF".to_string());
+    let mut file = use_signal(|| "qwen2.5-0.5b-instruct-q4_k_m.gguf".to_string());
     let mut assistant_description = use_signal(|| {
         "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.".to_string()
     });
@@ -89,7 +99,7 @@ fn Setup() -> Element {
 
     rsx! {
         div {
-            class: "flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-200",
+            class: "flex items-center justify-center min-h-screen bg-linear-to-br from-gray-50 to-gray-200",
             div {
                 class: "w-full max-w-md p-6 space-y-2 bg-white rounded-2xl shadow-2xl",
                 div {
@@ -204,13 +214,19 @@ fn Setup() -> Element {
     }
 }
 
+#[derive(Clone)]
+struct LoadingProgress {
+    loading_progress: SyncSignal<f32>,
+}
+
 #[component]
 fn Home(
-    user: ReadOnlySignal<String>,
-    model_id: ReadOnlySignal<String>,
-    file: ReadOnlySignal<String>,
-    assistant_description: ReadOnlySignal<String>,
+    user: ReadSignal<String>,
+    model_id: ReadSignal<String>,
+    file: ReadSignal<String>,
+    assistant_description: ReadSignal<String>,
 ) -> Element {
+    let mut loading_progress: LoadingProgress = use_context();
     let mut current_message = use_signal(String::new);
     let mut messages: Signal<Vec<MessageState>> = use_signal(Vec::new);
     let mut assistant_responding = use_signal(|| false);
@@ -221,7 +237,9 @@ fn Home(
                 "main",
                 file,
             )))
-            .build()
+            .build_with_loading_handler(move |progress| {
+                loading_progress.loading_progress.set(progress.progress())
+            })
             .await
     })
     .suspend()?;
@@ -319,19 +337,26 @@ fn Home(
                                     messages_mut.push(assistant_response);
                                 }
                                 spawn(async move {
-                                    if let Ok(chat) = &mut *chat.write() {
-                                        let mut stream = chat.add_message(final_message);
-                                        let start = std::time::Instant::now();
-                                        while let Some(new_text) = stream.next().await {
+                                    match &mut *chat.write() {
+                                        Ok(chat) => {
+                                            let mut stream = chat.add_message(final_message);
+                                            let start = Instant::now();
+                                            while let Some(new_text) = stream.next().await {
+                                                let mut messages = messages.write();
+                                                let Some(last_message) = messages.last_mut() else { break };
+                                                last_message.text += &new_text;
+                                                last_message.tokens += 1;
+                                            }
+                                            let response_time = start.elapsed();
                                             let mut messages = messages.write();
-                                            let Some(last_message) = messages.last_mut() else { break };
-                                            last_message.text += &new_text;
-                                            last_message.tokens += 1;
+                                            let Some(last_message) = messages.last_mut() else { return };
+                                            last_message.response_time = Some(response_time);
                                         }
-                                        let response_time = start.elapsed();
-                                        let mut messages = messages.write();
-                                        let Some(last_message) = messages.last_mut() else { return };
-                                        last_message.response_time = Some(response_time);
+                                        Err(err) => {
+                                            let mut messages = messages.write();
+                                            let Some(last_message) = messages.last_mut() else { return };
+                                            last_message.text = format!("Error: {}", err);
+                                        }
                                     }
                                     assistant_responding.set(false);
                                 });
@@ -382,7 +407,7 @@ struct MessageState {
 }
 
 #[component]
-fn Message(message: ReadOnlySignal<MessageState>) -> Element {
+fn Message(message: ReadSignal<MessageState>) -> Element {
     let assistant_placeholder = use_memo(move || {
         let message = message.read();
         message.user == User::Assistant && message.text.is_empty()
@@ -442,7 +467,7 @@ fn Message(message: ReadOnlySignal<MessageState>) -> Element {
                     "text-gray-400"
                 },
                 div {
-                    class: "flex-grow",
+                    class: "grow",
                     dangerous_inner_html: "{contents}"
                 }
                 if let Some(tokens_per_second) = tokens_per_second() {
