@@ -8,7 +8,9 @@ edition = "2021"
 comrak = "0.40.0"
 dioxus = { version = "0.7", features = ["router"] }
 reqwest = "0.12.12"
-kalosm-llama = { git = "https://github.com/floneum/floneum" }
+kalosm-llama = { git = "https://github.com/floneum/kalosm" }
+fusor = { git = "https://github.com/floneum/kalosm", optional = true }
+fusor-conformance = { git = "https://github.com/floneum/kalosm", optional = true }
 getrandom = { version = "0.3", features = ["wasm_js"] }
 wasm-timer = "0.2.5"
 tracing = "0.1.44"
@@ -16,7 +18,15 @@ dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version 
 
 [features]
 web = ["dioxus/web"]
-desktop = ["kalosm-llama/tokio", "dioxus/desktop"]
+desktop = ["dioxus/desktop"]
+conformance = ["dep:fusor", "dep:fusor-conformance"]
+
+# `wasm-timer` pulls in parking_lot 0.11 -> instant 0.1, whose `now()` is only
+# implemented when the `wasm-bindgen` feature is on. Release builds prune the
+# dead reference via LTO, but debug builds (used for fast conformance runs) keep
+# it and fail to link without this. Build-only; does not affect runtime behavior.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+instant = { version = "0.1", features = ["wasm-bindgen"] }
 
 [profile.release]
 lto = true
